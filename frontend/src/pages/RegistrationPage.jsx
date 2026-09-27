@@ -5,6 +5,7 @@ import { fetchEvents, registerForEvent } from '../services/api';
 import DigitalPass from '../components/DigitalPass';
 import { useAuth } from '../context/AuthContext';
 import GoogleAuthModal from '../components/GoogleAuthModal';
+import EventSelectDropdown from '../components/EventSelectDropdown';
 
 export default function RegistrationPage() {
   const [searchParams] = useSearchParams();
@@ -180,16 +181,16 @@ export default function RegistrationPage() {
                     <User className="w-5 h-5" />
                   </div>
                   <div className="text-xs">
-                    <p className="font-bold text-dark-text dark:text-dark-text light:text-light-text">Have a Google Account?</p>
-                    <p className="text-dark-text-secondary">Sign in with Google to pre-fill your information and save passes to your account.</p>
+                    <p className="font-bold text-dark-text dark:text-dark-text light:text-light-text">Sign In with Email or Google</p>
+                    <p className="text-dark-text-secondary">Sign in with your email to pre-fill your information and save festival passes to your account.</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setAuthModalOpen(true)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover shrink-0"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover shrink-0 shadow-md shadow-brand-purple/20 transition-all"
                 >
-                  Sign in with Google
+                  Sign In / Register
                 </button>
               </div>
             )}
@@ -205,22 +206,27 @@ export default function RegistrationPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Event Selection */}
               <div className="space-y-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-dark-text-secondary">
-                  Select Event <span className="text-brand-error">*</span>
-                </label>
-                <select
-                  value={formData.eventId}
-                  onChange={handleEventChange}
-                  required
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-dark-text-secondary">
+                    Select Event <span className="text-brand-error">*</span>
+                  </label>
+                  <span className="text-[11px] text-dark-muted font-medium hidden sm:inline">
+                    29 Championships across Sports, Cultural &amp; Technical
+                  </span>
+                </div>
+                <EventSelectDropdown
+                  events={events}
+                  selectedEventId={formData.eventId}
                   disabled={loadingEvents}
-                  className="w-full px-4 py-3 rounded-2xl bg-dark-elevated dark:bg-dark-elevated light:bg-light-surface-secondary border border-dark-border text-sm font-semibold text-dark-text dark:text-dark-text light:text-light-text focus:outline-none focus:border-brand-purple"
-                >
-                  {events.map((ev) => (
-                    <option key={ev.id} value={ev.id} className="bg-dark-surface text-dark-text">
-                      [{ev.category}] {ev.title} ({ev.registeredCount || 0}/{ev.capacity} slots)
-                    </option>
-                  ))}
-                </select>
+                  onChange={(evId) => {
+                    const ev = events.find((item) => item.id === evId);
+                    setFormData((prev) => ({
+                      ...prev,
+                      eventId: evId,
+                      participantType: ev ? ev.participantType : 'INDIVIDUAL'
+                    }));
+                  }}
+                />
               </div>
 
               {/* Personal Details */}

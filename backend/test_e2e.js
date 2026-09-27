@@ -147,7 +147,22 @@ async function runTests() {
     }
 
     // 9. User Authentication & Registration Isolation
-    console.log('\n--- TEST 8: User Registration & Strict Data Isolation ---');
+    console.log('\n--- TEST 8: Participant Direct Email Sign-In / Sign-Up ---');
+    const emailLoginRes = await fetch(`${BASE_URL}/auth/email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'sivatejakodavatiganti@gmail.com',
+        name: 'Venkata Sivateja Kodavatiganti',
+        college: 'R V R & J C College of Engineering'
+      })
+    });
+    const emailLoginData = await emailLoginRes.json();
+    assert(emailLoginRes.status === 200, 'Direct Email Sign-in endpoint succeeds with 200 OK');
+    assert(Boolean(emailLoginData.data?.token), 'JWT token issued for email sign-in');
+    assert(emailLoginData.data?.user?.email === 'sivatejakodavatiganti@gmail.com', 'User profile matches submitted email');
+
+    console.log('\n--- TEST 9: User Registration & Strict Data Isolation ---');
     // Create two test users directly in DB
     const testUserA = await prisma.user.upsert({
       where: { email: 'usera@rvrjc.ac.in' },

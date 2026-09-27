@@ -37,6 +37,7 @@ export const submitContactMessage = (data) => api.post('/contact', data);
 // User Auth & Registrations
 // -------------------------------------------------------------
 export const loginWithGoogle = (credential) => api.post('/auth/google', { credential });
+export const loginWithEmail = (data) => api.post('/auth/email', data);
 export const fetchCurrentUser = () => api.get('/auth/me');
 
 export const registerForEvent = (data) => api.post('/registrations', data);

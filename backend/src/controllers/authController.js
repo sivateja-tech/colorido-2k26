@@ -81,6 +81,81 @@ async function googleAuth(req, res, next) {
 }
 
 /**
+ * Handle Direct Email Sign-in / Sign-up for Normal Users
+ * Allows participants to sign in with their email, name, college, etc.
+ * Works seamlessly in all environments and allows participants to register with their email.
+ */
+async function emailAuth(req, res, next) {
+  try {
+    const { email, name, college, phone } = req.body;
+
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid email address is required for participant sign-in.'
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const displayName = name && name.trim() ? name.trim() : normalizedEmail.split('@')[0];
+
+    // Find or create participant
+    let user = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          name: displayName,
+          college: college && college.trim() ? college.trim() : 'R V R & J C College of Engineering',
+          phone: phone && phone.trim() ? phone.trim() : null,
+          role: 'USER'
+        }
+      });
+    } else {
+      // Update name/college/phone if newly provided
+      const updates = {};
+      if (name && name.trim() && user.name !== name.trim()) updates.name = name.trim();
+      if (college && college.trim() && user.college !== college.trim()) updates.college = college.trim();
+      if (phone && phone.trim() && user.phone !== phone.trim()) updates.phone = phone.trim();
+      if (Object.keys(updates).length > 0) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: updates
+        });
+      }
+    }
+
+    const appToken = jwt.sign(
+      { userId: user.id, email: user.email, role: 'USER' },
+      config.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Successfully signed in with email',
+      data: {
+        token: appToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          profileImage: user.profileImage,
+          college: user.college,
+          phone: user.phone,
+          role: user.role
+        }
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * Admin Login with Email & Password
  * Section 49: Admin MUST NOT use Google OAuth. Uses email/password, bcrypt, JWT.
  */
@@ -209,6 +284,7 @@ async function getAdminMe(req, res, next) {
 
 module.exports = {
   googleAuth,
+  emailAuth,
   adminLogin,
   getMe,
   getAdminMe

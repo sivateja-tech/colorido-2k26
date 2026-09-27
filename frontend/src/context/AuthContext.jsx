@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loginWithGoogle, loginAdmin, fetchCurrentUser, fetchAdminMe } from '../services/api';
+import { loginWithGoogle, loginWithEmail, loginAdmin, fetchCurrentUser, fetchAdminMe } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -111,6 +111,27 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Direct Email Sign-in for Normal Users (Works seamlessly without Google Cloud config)
+  const handleEmailLogin = async (data) => {
+    try {
+      const res = await loginWithEmail(data);
+      if (res.data.success) {
+        const { user: authedUser, token } = res.data.data;
+        setUser(authedUser);
+        localStorage.setItem('colorido_user_token', token);
+        localStorage.setItem('colorido_user', JSON.stringify(authedUser));
+        return { success: true, user: authedUser };
+      }
+      return { success: false, message: res.data.message || 'Email authentication failed' };
+    } catch (err) {
+      console.error('Email Sign-In failed:', err);
+      return {
+        success: false,
+        message: err.response?.data?.message || err.message || 'Email Sign-in failed.'
+      };
+    }
+  };
+
   // Logout normal user
   const logoutUser = () => {
     setUser(null);
@@ -134,6 +155,7 @@ export function AuthProvider({ children }) {
         isAuthenticated: !!user,
         loading,
         handleGoogleLogin,
+        handleEmailLogin,
         handleAdminLogin,
         logoutUser,
         logoutAdmin,
