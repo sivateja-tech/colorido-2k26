@@ -1,0 +1,79 @@
+const jwt = require('jsonwebtoken');
+const prisma = require('../services/prisma');
+const config = require('../config');
+
+/**
+ * Authentication middleware for normal users.
+ * Strictly verifies JWT bearer token and fetches user from DB.
+ */
+async function requireAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please sign in with your Google account.'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, config.JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired session. Please sign in again.',
+        error: err.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token'
+      });
+    }
+
+    if (!decoded.userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token structure. User ID missing.'
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User profile not found or deleted.'
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Optional authentication middleware for endpoints that can enrich data
+ * when a user is logged in, but don't strictly require it.
+ */
+async function optionalAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, config.JWT_SECRET);
+        if (decoded.userId) {
+          const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+          if (user) req.user = user;
+        }
+      } catch (e) {
+        // Silently ignore invalid optional tokens
+      }
+    }
+  } catch (e) {}
+  next();
+}
+
+module.exports = { requireAuth, optionalAuth };

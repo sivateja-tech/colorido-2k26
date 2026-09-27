@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  profileImage  String?
+  googleId      String?        @unique
+  college       String?
+  phone         String?
+  role          String         @default("USER")
+  registrations Registration[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([email])
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("ADMIN")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Event {
+  id               String         @id @default(cuid())
+  title            String
+  slug             String         @unique
+  category         String         // SPORTS, CULTURAL, TECHNICAL
+  visualType       String         // cricket, football, hackathon, dance, etc.
+  description      String         @db.Text
+  shortDescription String?        @db.Text
+  rules            String?        @db.Text
+  eligibility      String?        @db.Text
+  date             String
+  startTime        String
+  endTime          String
+  venue            String
+  prizePool        String
+  firstPrize       String?
+  secondPrize      String?
+  capacity         Int            @default(50)
+  registeredCount  Int            @default(0)
+  participantType  String         @default("INDIVIDUAL") // INDIVIDUAL or TEAM
+  minTeamSize      Int            @default(1)
+  maxTeamSize      Int            @default(1)
+  featured         Boolean        @default(false)
+  published        Boolean        @default(true)
+  imageUrl         String?
+  registrations    Registration[]
+  schedules        Schedule[]
+  results          Result[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([category])
+  @@index([slug])
+  @@index([published])
+}
+
+model Registration {
+  id              String   @id @default(cuid())
+  registrationId  String   @unique // e.g. COL26-V8R2J
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  fullName        String
+  email           String
+  phone           String
+  college         String
+  department      String
+  year            String
+  participantType String   @default("INDIVIDUAL")
+  teamName        String?
+  teamMembers     String?  @db.Text
+  status          String   @default("CONFIRMED") // PENDING, CONFIRMED, REJECTED, CANCELLED
+  qrData          String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([eventId, email])
+  @@index([userId])
+  @@index([eventId])
+  @@index([registrationId])
+}
+
+model Schedule {
+  id          String   @id @default(cuid())
+  eventId     String?
+  event       Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  title       String
+  category    String   // SPORTS, CULTURAL, TECHNICAL
+  date        String
+  startTime   String
+  endTime     String
+  venue       String
+  stage       String?
+  description String?  @db.Text
+  status      String   @default("SCHEDULED") // SCHEDULED, LIVE, COMPLETED
+  published   Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([date])
+  @@index([published])
+}
+
+model Result {
+  id              String   @id @default(cuid())
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category        String   @default("SPORTS")
+  rank            Int
+  position        String   // 1st Place (Gold), 2nd Place (Silver), 3rd Place (Bronze), Winner
+  participantName String
+  college         String
+  teamName        String?
+  score           String?
+  notes           String?  @db.Text
+  published       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([category])
+  @@index([published])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String   @db.Text
+  status    String   @default("UNREAD") // UNREAD, READ, RESOLVED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}

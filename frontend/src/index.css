@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark Theme Default */
+    --bg-page: #0A0C10;
+    --bg-surface: #11151C;
+    --bg-elevated: #181D26;
+    --bg-highest: #1E2430;
+    --color-brand: #6D5AE6;
+    --color-brand-hover: #7B6AEF;
+    --color-secondary: #4D7CFE;
+    --color-accent: #9B8AFB;
+    --text-primary: #F5F7FA;
+    --text-secondary: #A9B1BF;
+    --text-muted: #737C8C;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --color-success: #35B779;
+    --color-warning: #E5A93D;
+    --color-error: #E05D65;
+  }
+
+  .light {
+    /* Light Theme */
+    --bg-page: #F6F7FA;
+    --bg-surface: #FFFFFF;
+    --bg-elevated: #FFFFFF;
+    --bg-highest: #F0F2F6;
+    --color-brand: #5546C7;
+    --color-brand-hover: #493BB5;
+    --color-secondary: #356AE6;
+    --color-accent: #7567D8;
+    --text-primary: #171A21;
+    --text-secondary: #5F6878;
+    --text-muted: #858D9B;
+    --border-color: #E1E4EA;
+    --border-subtle: #ECEEF2;
+    --color-success: #218A5A;
+    --color-warning: #A87516;
+    --color-error: #C74752;
+  }
+
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+/* Glass & Surface styles */
+.glass-surface {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.glass-navbar {
+  background-color: rgba(10, 12, 16, 0.85);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.light .glass-navbar {
+  background-color: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Interactive Card with Cursor Edge Tracking */
+.card-cursor-glow {
+  position: relative;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s ease;
+}
+
+.card-cursor-glow:hover {
+  transform: translateY(-4px);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-page);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand);
+}
+
+/* Accessibility: respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
