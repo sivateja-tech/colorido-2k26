@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Download, Share2, Printer, CheckCircle2, ShieldCheck, MapPin, Calendar, Clock, User, Building, Award } from 'lucide-react';
+import { Download, Share2, Printer, CheckCircle2, ShieldCheck, MapPin, Calendar, Clock, User, Building, Award, ExternalLink } from 'lucide-react';
 
 export default function DigitalPass({ pass }) {
   const printRef = useRef(null);
@@ -19,17 +19,23 @@ export default function DigitalPass({ pass }) {
     }
   }
 
+  // Dynamic origin so scanning works locally, via LAN IP, or on production domain
+  const origin = typeof window !== 'undefined' && window.location?.origin
+    ? window.location.origin
+    : (import.meta.env.VITE_APP_URL || 'http://localhost:5173');
+  const verifyUrl = `${origin}/verify/${pass.registrationId}`;
+
   const handlePrint = () => {
     window.print();
   };
 
   const handleShare = async () => {
-    const url = window.location.href;
+    const url = verifyUrl;
     if (navigator.share) {
       try {
         await navigator.share({
           title: `COLORIDO 2K26 Digital Pass - ${pass.registrationId}`,
-          text: `Here is my official entry pass for ${event.title || 'COLORIDO 2K26'}!`,
+          text: `Official Entry Pass for ${event.title || 'COLORIDO 2K26'} - ${pass.fullName}`,
           url: url,
         });
       } catch (err) {
@@ -37,7 +43,7 @@ export default function DigitalPass({ pass }) {
       }
     } else {
       navigator.clipboard.writeText(url);
-      alert('Pass link copied to clipboard!');
+      alert('Official Pass Verification link copied to clipboard!');
     }
   };
 
@@ -62,7 +68,7 @@ export default function DigitalPass({ pass }) {
             />
             <div>
               <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">
-                R V R & J C College of Engineering
+                R V R &amp; J C College of Engineering
               </p>
               <h2 className="text-xl sm:text-2xl font-black font-display tracking-tight text-white">
                 COLORIDO <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-purple to-brand-cyan">2K26</span>
@@ -70,9 +76,9 @@ export default function DigitalPass({ pass }) {
             </div>
           </div>
           <div className="text-right">
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
               <ShieldCheck className="w-3.5 h-3.5" />
-              Verified
+              Verified Pass
             </span>
           </div>
         </div>
@@ -86,23 +92,37 @@ export default function DigitalPass({ pass }) {
             </div>
           </div>
           <div className="text-right text-xs text-slate-400">
-            <span className="block text-[10px] uppercase">Category</span>
-            <span className="font-semibold text-brand-cyan uppercase">{event.category || 'EVENT'}</span>
+            <span className="block text-[10px] uppercase font-semibold text-slate-400">Category</span>
+            <span className="font-bold text-brand-cyan uppercase tracking-wider">{event.category || 'EVENT'}</span>
           </div>
         </div>
 
         {/* QR Code and Primary Attendee Details */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-center my-6">
           {/* QR Code Section */}
-          <div className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl border border-white/20 shadow-md">
-            <QRCodeSVG
-              value={pass.qrData || `https://colorido2k26.rvrjc.ac.in/verify/${pass.registrationId}`}
-              size={135}
-              level="H"
-              includeMargin={false}
-            />
-            <span className="mt-2 text-[10px] font-mono text-dark-900 font-semibold tracking-widest">
-              SCAN TO VERIFY
+          <div className="flex flex-col items-center justify-center">
+            <a
+              href={verifyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative flex flex-col items-center justify-center p-3 bg-white rounded-2xl border-2 border-white/90 shadow-xl shadow-black/40 hover:scale-[1.03] transition-all"
+              title="Click or scan to view live verification"
+            >
+              <QRCodeSVG
+                value={verifyUrl}
+                size={145}
+                level="M"
+                includeMargin={true}
+                bgColor="#FFFFFF"
+                fgColor="#0A0C14"
+              />
+              <div className="mt-1.5 flex items-center justify-center gap-1 text-[10px] font-mono font-bold text-dark-900 group-hover:text-brand-purple tracking-wider transition-colors">
+                <span>SCAN / VERIFY</span>
+                <ExternalLink className="w-2.5 h-2.5 opacity-70" />
+              </div>
+            </a>
+            <span className="mt-2 text-[10px] text-slate-400 font-mono tracking-wider text-center">
+              Official Entry QR
             </span>
           </div>
 
@@ -138,20 +158,20 @@ export default function DigitalPass({ pass }) {
         <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2.5">
           <div className="flex items-center gap-2">
             <Award className="w-4 h-4 text-brand-purple" />
-            <h4 className="text-base font-bold text-white">{event.title}</h4>
+            <h4 className="text-base font-bold text-white">{event.title || 'Official Festival Competition'}</h4>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-brand-cyan" />
-              <span>{event.demoDate}</span>
+              <span>{event.date || event.demoDate || 'March 20-22, 2026'}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span>{event.demoTime}</span>
+              <span>{event.startTime || event.time || event.demoTime || '10:00 AM'}</span>
             </div>
             <div className="sm:col-span-2 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-rose-400" />
-              <span>{event.venue}</span>
+              <span>{event.venue || 'R V R & J C Campus'}</span>
             </div>
           </div>
         </div>
@@ -172,13 +192,13 @@ export default function DigitalPass({ pass }) {
 
         {/* Security Watermark Footer */}
         <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
-          <span>STATUS: <strong className="text-emerald-400">{pass.status}</strong></span>
-          <span>Security Code: <strong>{pass.registrationId.replace('COL26-', '#')}</strong></span>
+          <span>STATUS: <strong className="text-emerald-400">{pass.status || 'CONFIRMED'}</strong></span>
+          <span>Security Code: <strong>{(pass.registrationId || '').replace('COL26-', '#')}</strong></span>
         </div>
       </div>
 
-      {/* Action Buttons: Print, Download, Share */}
-      <div className="flex items-center justify-center gap-3 pt-2">
+      {/* Action Buttons: Print, Download, Share, Verify Online */}
+      <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
         <button
           onClick={handlePrint}
           type="button"
@@ -195,6 +215,15 @@ export default function DigitalPass({ pass }) {
           <Share2 className="w-4 h-4" />
           <span>Share Pass</span>
         </button>
+        <a
+          href={verifyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 transition-all shadow-md"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          <span>Verify Online</span>
+        </a>
       </div>
     </div>
   );

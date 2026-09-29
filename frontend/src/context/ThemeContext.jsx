@@ -1,31 +1,18 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-  // Default to dark as per COLORIDO 2K26 design guidelines
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('colorido_theme') || 'dark';
-  });
-
+  // Fixed dark theme as per COLORIDO 2K26 brand design guidelines
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else {
-      root.classList.add('light');
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('colorido_theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
-  };
+    root.classList.add('dark');
+    root.classList.remove('light');
+    localStorage.setItem('colorido_theme', 'dark');
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: 'dark', toggleTheme: () => {} }}>
       {children}
     </ThemeContext.Provider>
   );

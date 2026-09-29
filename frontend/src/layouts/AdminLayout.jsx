@@ -13,7 +13,6 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import ThemeToggle from '../components/ThemeToggle';
 
 export default function AdminLayout() {
   const { admin, loading, logoutAdmin } = useAuth();
@@ -76,8 +75,6 @@ export default function AdminLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <ThemeToggle />
-
             <div className="hidden sm:flex flex-col text-right">
               <span className="text-xs font-semibold text-dark-text dark:text-dark-text light:text-light-text">{admin.name}</span>
               <span className="text-[10px] text-dark-muted font-mono">{admin.email}</span>
