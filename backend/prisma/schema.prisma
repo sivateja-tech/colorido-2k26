@@ -63,15 +63,17 @@ model EmailVerification {
 }
 
 model Event {
-  id               String         @id @default(cuid())
+  id               String            @id @default(cuid())
   title            String
-  slug             String         @unique
-  category         String         // SPORTS, CULTURAL, TECHNICAL
-  visualType       String         // cricket, football, hackathon, dance, etc.
-  description      String         @db.Text
-  shortDescription String?        @db.Text
-  rules            String?        @db.Text
-  eligibility      String?        @db.Text
+  slug             String            @unique
+  category         String            // SPORTS, CULTURAL, TECHNICAL
+  visualType       String            // cricket, football, hackathon, dance, etc.
+  description      String            @db.Text
+  shortDescription String?           @db.Text
+  rules            String?           @db.Text
+  eligibility      String?           @db.Text
+  requirements     String?           @db.Text
+  importantDates   String?           @db.Text
   date             String
   startTime        String
   endTime          String
@@ -79,19 +81,22 @@ model Event {
   prizePool        String
   firstPrize       String?
   secondPrize      String?
-  capacity         Int            @default(50)
-  registeredCount  Int            @default(0)
-  participantType  String         @default("INDIVIDUAL") // INDIVIDUAL or TEAM
-  minTeamSize      Int            @default(1)
-  maxTeamSize      Int            @default(1)
-  featured         Boolean        @default(false)
-  published        Boolean        @default(true)
+  capacity         Int               @default(50)
+  registeredCount  Int               @default(0)
+  participantType  String            @default("INDIVIDUAL") // INDIVIDUAL or TEAM
+  minTeamSize      Int               @default(1)
+  maxTeamSize      Int               @default(1)
+  featured         Boolean           @default(false)
+  published        Boolean           @default(true)
   imageUrl         String?
   registrations    Registration[]
   schedules        Schedule[]
   results          Result[]
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  rounds           EventRound[]
+  organizers       EventOrganizer[]
+  faqs             EventFaq[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([category])
   @@index([slug])
@@ -99,30 +104,81 @@ model Event {
 }
 
 model Registration {
-  id              String   @id @default(cuid())
-  registrationId  String   @unique // e.g. COL26-V8R2J
+  id              String    @id @default(cuid())
+  registrationId  String    @unique // e.g. COL26-V8R2J
   userId          String?
-  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   eventId         String
-  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   fullName        String
   email           String
   phone           String
   college         String
   department      String
   year            String
-  participantType String   @default("INDIVIDUAL")
+  participantType String    @default("INDIVIDUAL")
   teamName        String?
-  teamMembers     String?  @db.Text
-  status          String   @default("CONFIRMED") // PENDING, CONFIRMED, REJECTED, CANCELLED
-  qrData          String   @db.Text
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  teamMembers     String?   @db.Text
+  status          String    @default("CONFIRMED") // PENDING, CONFIRMED, REJECTED, CANCELLED, CHECKED_IN
+  checkedIn       Boolean   @default(false)
+  checkedInAt     DateTime?
+  qrData          String    @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@unique([eventId, email])
   @@index([userId])
   @@index([eventId])
   @@index([registrationId])
+}
+
+model EventRound {
+  id                    String   @id @default(cuid())
+  eventId               String
+  event                 Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  roundNumber           Int      @default(1)
+  title                 String
+  description           String   @db.Text
+  date                  String
+  time                  String
+  venue                 String
+  duration              String
+  qualificationCriteria String   @db.Text
+  order                 Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([roundNumber])
+}
+
+model EventOrganizer {
+  id         String   @id @default(cuid())
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name       String
+  role       String   // "Faculty Convenor", "Student Coordinator", etc.
+  department String
+  phone      String
+  email      String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([eventId])
+}
+
+model EventFaq {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  question  String
+  answer    String   @db.Text
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId])
 }
 
 model Schedule {

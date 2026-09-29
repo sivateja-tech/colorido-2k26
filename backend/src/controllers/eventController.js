@@ -42,7 +42,18 @@ async function getEvents(req, res, next) {
         where,
         skip,
         take,
-        orderBy: [{ featured: 'desc' }, { title: 'asc' }]
+        orderBy: [{ featured: 'desc' }, { title: 'asc' }],
+        include: {
+          rounds: {
+            orderBy: { roundNumber: 'asc' }
+          },
+          organizers: {
+            orderBy: { order: 'asc' }
+          },
+          faqs: {
+            orderBy: { order: 'asc' }
+          }
+        }
       }),
       prisma.event.count({ where })
     ]);
@@ -73,6 +84,15 @@ async function getEventById(req, res, next) {
         OR: [{ id: id }, { slug: id }]
       },
       include: {
+        rounds: {
+          orderBy: { roundNumber: 'asc' }
+        },
+        organizers: {
+          orderBy: { order: 'asc' }
+        },
+        faqs: {
+          orderBy: { order: 'asc' }
+        },
         schedules: {
           where: { published: true },
           orderBy: { order: 'asc' }
@@ -95,8 +115,7 @@ async function getEventById(req, res, next) {
 }
 
 /**
- * Admin: Create new event
- * Section 52: Title, Category, Description, Date, Start time, End time, Venue, Prize, Capacity, Min team size, Max team size, Visual type, Image
+ * Admin: Create new event with rounds, organizers, faqs
  */
 async function createEvent(req, res, next) {
   try {
@@ -108,6 +127,8 @@ async function createEvent(req, res, next) {
       shortDescription,
       rules,
       eligibility,
+      requirements,
+      importantDates,
       date,
       startTime,
       endTime,
@@ -121,7 +142,10 @@ async function createEvent(req, res, next) {
       maxTeamSize = 1,
       imageUrl,
       featured = false,
-      published = true
+      published = true,
+      rounds = [],
+      organizers = [],
+      faqs = []
     } = req.body;
 
     if (!title || !category || !description || !date || !startTime || !endTime || !venue) {
@@ -161,6 +185,8 @@ async function createEvent(req, res, next) {
         shortDescription: shortDescription ? shortDescription.trim() : description.slice(0, 150),
         rules: rules ? rules.trim() : 'Standard collegiate competition rules apply.',
         eligibility: eligibility ? eligibility.trim() : 'Open to all bonafide college students with valid student ID.',
+        requirements: requirements ? requirements.trim() : null,
+        importantDates: importantDates ? importantDates.trim() : null,
         date: date.trim(),
         startTime: startTime.trim(),
         endTime: endTime.trim(),
@@ -175,7 +201,42 @@ async function createEvent(req, res, next) {
         maxTeamSize: parseInt(maxTeamSize) || 1,
         featured: Boolean(featured),
         published: Boolean(published),
-        imageUrl: imageUrl || null
+        imageUrl: imageUrl || null,
+        rounds: Array.isArray(rounds) && rounds.length > 0 ? {
+          create: rounds.map((r, idx) => ({
+            roundNumber: parseInt(r.roundNumber) || idx + 1,
+            title: r.title || `Round ${idx + 1}`,
+            description: r.description || '',
+            date: r.date || date,
+            time: r.time || `${startTime} - ${endTime}`,
+            venue: r.venue || venue,
+            duration: r.duration || '2 Hours',
+            qualificationCriteria: r.qualificationCriteria || 'Top scoring participants qualify.',
+            order: idx
+          }))
+        } : undefined,
+        organizers: Array.isArray(organizers) && organizers.length > 0 ? {
+          create: organizers.map((o, idx) => ({
+            name: o.name || 'Coordinator',
+            role: o.role || 'Event Coordinator',
+            department: o.department || 'RVR & JC College of Engineering',
+            phone: o.phone || '+91 98765 43210',
+            email: o.email || 'coordinator@rvrjc.ac.in',
+            order: idx
+          }))
+        } : undefined,
+        faqs: Array.isArray(faqs) && faqs.length > 0 ? {
+          create: faqs.map((f, idx) => ({
+            question: f.question,
+            answer: f.answer,
+            order: idx
+          }))
+        } : undefined
+      },
+      include: {
+        rounds: true,
+        organizers: true,
+        faqs: true
       }
     });
 
@@ -190,7 +251,7 @@ async function createEvent(req, res, next) {
 }
 
 /**
- * Admin: Update existing event
+ * Admin: Update existing event with rounds, organizers, faqs
  */
 async function updateEvent(req, res, next) {
   try {
@@ -208,6 +269,8 @@ async function updateEvent(req, res, next) {
       shortDescription,
       rules,
       eligibility,
+      requirements,
+      importantDates,
       date,
       startTime,
       endTime,
@@ -221,7 +284,10 @@ async function updateEvent(req, res, next) {
       maxTeamSize,
       imageUrl,
       featured,
-      published
+      published,
+      rounds,
+      organizers,
+      faqs
     } = req.body;
 
     const data = {};
@@ -232,6 +298,8 @@ async function updateEvent(req, res, next) {
     if (shortDescription !== undefined) data.shortDescription = shortDescription.trim();
     if (rules !== undefined) data.rules = rules.trim();
     if (eligibility !== undefined) data.eligibility = eligibility.trim();
+    if (requirements !== undefined) data.requirements = requirements.trim();
+    if (importantDates !== undefined) data.importantDates = importantDates.trim();
     if (date !== undefined) data.date = date.trim();
     if (startTime !== undefined) data.startTime = startTime.trim();
     if (endTime !== undefined) data.endTime = endTime.trim();
@@ -247,9 +315,73 @@ async function updateEvent(req, res, next) {
     if (featured !== undefined) data.featured = Boolean(featured);
     if (published !== undefined) data.published = Boolean(published);
 
-    const updated = await prisma.event.update({
+    // Update main event
+    await prisma.event.update({
       where: { id },
       data
+    });
+
+    // Sync Rounds if provided
+    if (Array.isArray(rounds)) {
+      await prisma.eventRound.deleteMany({ where: { eventId: id } });
+      if (rounds.length > 0) {
+        await prisma.eventRound.createMany({
+          data: rounds.map((r, idx) => ({
+            eventId: id,
+            roundNumber: parseInt(r.roundNumber) || idx + 1,
+            title: r.title || `Round ${idx + 1}`,
+            description: r.description || '',
+            date: r.date || existing.date,
+            time: r.time || `${existing.startTime} - ${existing.endTime}`,
+            venue: r.venue || existing.venue,
+            duration: r.duration || '2 Hours',
+            qualificationCriteria: r.qualificationCriteria || 'Top scoring participants qualify.',
+            order: idx
+          }))
+        });
+      }
+    }
+
+    // Sync Organizers if provided
+    if (Array.isArray(organizers)) {
+      await prisma.eventOrganizer.deleteMany({ where: { eventId: id } });
+      if (organizers.length > 0) {
+        await prisma.eventOrganizer.createMany({
+          data: organizers.map((o, idx) => ({
+            eventId: id,
+            name: o.name || 'Coordinator',
+            role: o.role || 'Event Coordinator',
+            department: o.department || 'RVR & JC College of Engineering',
+            phone: o.phone || '+91 98765 43210',
+            email: o.email || 'coordinator@rvrjc.ac.in',
+            order: idx
+          }))
+        });
+      }
+    }
+
+    // Sync FAQs if provided
+    if (Array.isArray(faqs)) {
+      await prisma.eventFaq.deleteMany({ where: { eventId: id } });
+      if (faqs.length > 0) {
+        await prisma.eventFaq.createMany({
+          data: faqs.map((f, idx) => ({
+            eventId: id,
+            question: f.question,
+            answer: f.answer,
+            order: idx
+          }))
+        });
+      }
+    }
+
+    const updated = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        rounds: { orderBy: { roundNumber: 'asc' } },
+        organizers: { orderBy: { order: 'asc' } },
+        faqs: { orderBy: { order: 'asc' } }
+      }
     });
 
     res.json({

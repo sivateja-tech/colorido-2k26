@@ -308,7 +308,7 @@ async function updateRegistrationStatus(req, res, next) {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED'];
+    const validStatuses = ['PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED', 'CHECKED_IN'];
     if (!status || !validStatuses.includes(status.toUpperCase())) {
       return res.status(400).json({
         success: false,
@@ -323,7 +323,11 @@ async function updateRegistrationStatus(req, res, next) {
 
     const updated = await prisma.registration.update({
       where: { id },
-      data: { status: status.toUpperCase() },
+      data: {
+        status: status.toUpperCase(),
+        checkedIn: status.toUpperCase() === 'CHECKED_IN' ? true : existing.checkedIn,
+        checkedInAt: status.toUpperCase() === 'CHECKED_IN' ? (existing.checkedInAt || new Date()) : existing.checkedInAt
+      },
       include: { event: true }
     });
 
@@ -337,10 +341,82 @@ async function updateRegistrationStatus(req, res, next) {
   }
 }
 
+/**
+ * Admin / Mobile Check-in: Search Registration ID, Verify Participant, Mark as Checked In
+ */
+async function checkInParticipant(req, res, next) {
+  try {
+    const { registrationId } = req.body;
+    if (!registrationId || !registrationId.trim()) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid Registration ID.' });
+    }
+
+    const query = registrationId.trim();
+    const registration = await prisma.registration.findFirst({
+      where: {
+        OR: [
+          { registrationId: { equals: query, mode: 'insensitive' } },
+          { id: query }
+        ]
+      },
+      include: {
+        event: true,
+        user: true
+      }
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: `No registration found matching "${query}". Please check the ID or QR code.`
+      });
+    }
+
+    if (registration.status === 'REJECTED' || registration.status === 'CANCELLED') {
+      return res.status(400).json({
+        success: false,
+        message: `This registration has status ${registration.status} and cannot be checked in.`,
+        data: registration
+      });
+    }
+
+    if (registration.checkedIn) {
+      return res.json({
+        success: true,
+        alreadyCheckedIn: true,
+        message: `Participant was already checked in at ${new Date(registration.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+        data: registration
+      });
+    }
+
+    const updated = await prisma.registration.update({
+      where: { id: registration.id },
+      data: {
+        checkedIn: true,
+        checkedInAt: new Date(),
+        status: 'CHECKED_IN'
+      },
+      include: {
+        event: true,
+        user: true
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Participant ${updated.fullName} successfully checked in for ${updated.event.title}!`,
+      data: updated
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   createRegistration,
   getUserRegistrations,
   getRegistrationById,
   getAllRegistrations,
-  updateRegistrationStatus
+  updateRegistrationStatus,
+  checkInParticipant
 };

@@ -70,6 +70,7 @@ export const adminToggleFeaturedEvent = (id) => api.patch(`/admin/events/${id}/f
 // Admin Registrations
 export const adminFetchRegistrations = (params) => api.get('/admin/registrations', { params });
 export const adminUpdateRegistrationStatus = (id, status) => api.patch(`/admin/registrations/${id}/status`, { status });
+export const adminCheckInParticipant = (registrationId) => api.post('/admin/registrations/check-in', { registrationId });
 
 // Admin Schedule
 export const adminFetchSchedule = (params) => api.get('/admin/schedule', { params });
