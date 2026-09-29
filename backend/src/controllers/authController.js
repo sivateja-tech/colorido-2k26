@@ -450,58 +450,62 @@ async function forgotPassword(req, res, next) {
     if (admin) userType = 'ADMIN';
     else if (user) userType = 'USER';
 
-    let rawToken = null;
-
-    if (userType) {
-      // Invalidate existing unused tokens for this email
-      await prisma.passwordReset.updateMany({
-        where: { email: normalizedEmail, used: false },
-        data: { used: true }
+    // If account does NOT exist in DB, direct user to Create Account
+    if (!userType) {
+      console.log(`[PASSWORD RESET] Non-existent email entered: ${normalizedEmail}. Directing to Create Account.`);
+      return res.status(404).json({
+        success: false,
+        notFound: true,
+        userNotFound: true,
+        message: 'No account found with this email address. Please create an account to get started.',
+        redirectTo: `/auth?mode=signup&email=${encodeURIComponent(normalizedEmail)}`
       });
-
-      // Generate cryptographically secure token
-      rawToken = crypto.randomBytes(32).toString('hex');
-      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-
-      // Expires in 20 minutes
-      const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
-
-      await prisma.passwordReset.create({
-        data: {
-          email: normalizedEmail,
-          tokenHash,
-          userType,
-          expiresAt,
-          used: false
-        }
-      });
-
-      const targetName = admin?.name || user?.name || 'Participant';
-      const resetPath = `/reset-password?token=${rawToken}`;
-
-      // Dispatch real email via Gmail SMTP
-      sendPasswordResetEmail({
-        to: normalizedEmail,
-        resetUrl: resetPath,
-        name: targetName
-      }).catch((emailErr) => {
-        console.error('[EMAIL ERROR] Failed to dispatch password reset email:', emailErr.message);
-      });
-
-      console.log(`\n========================================`);
-      console.log(`[PASSWORD RESET] Link generated for ${normalizedEmail}:`);
-      console.log(`http://localhost:5173${resetPath}`);
-      console.log(`========================================\n`);
     }
 
-    // Generic response to prevent user enumeration
-    const genericMessage = 'If an account exists for this email, password reset instructions have been sent.';
+    // Invalidate existing unused tokens for this email
+    await prisma.passwordReset.updateMany({
+      where: { email: normalizedEmail, used: false },
+      data: { used: true }
+    });
 
-    // In development / evaluator mode, provide the direct reset URL in data for convenience
+    // Generate cryptographically secure token
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    // Expires in 20 minutes
+    const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
+
+    await prisma.passwordReset.create({
+      data: {
+        email: normalizedEmail,
+        tokenHash,
+        userType,
+        expiresAt,
+        used: false
+      }
+    });
+
+    const targetName = admin?.name || user?.name || 'Participant';
+    const resetPath = `/reset-password?token=${rawToken}`;
+
+    // Dispatch real email via Gmail SMTP
+    sendPasswordResetEmail({
+      to: normalizedEmail,
+      resetUrl: resetPath,
+      name: targetName
+    }).catch((emailErr) => {
+      console.error('[EMAIL ERROR] Failed to dispatch password reset email:', emailErr.message);
+    });
+
+    console.log(`\n========================================`);
+    console.log(`[PASSWORD RESET] Link generated for ${normalizedEmail}:`);
+    console.log(`http://localhost:5173${resetPath}`);
+    console.log(`========================================\n`);
+
     return res.json({
       success: true,
-      message: genericMessage,
-      data: rawToken ? { resetUrl: `/reset-password?token=${rawToken}` } : null
+      message: 'Password reset link has been dispatched to your email.',
+      data: { resetUrl: resetPath }
     });
   } catch (err) {
     next(err);

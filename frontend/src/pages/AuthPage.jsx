@@ -16,19 +16,20 @@ export default function AuthPage() {
   const { login, register, isAuthenticated, role } = useAuth();
 
   // Mode: 'signin' or 'signup'
-  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
+  const modeParam = searchParams.get('mode') || searchParams.get('tab');
+  const initialMode = (modeParam === 'signup' || modeParam === 'register' || location.state?.mode === 'signup') ? 'signup' : 'signin';
   const [mode, setMode] = useState(initialMode);
   const redirectTarget = searchParams.get('redirect') || location.state?.from?.pathname;
 
   // Sign In Form State
-  const [signInEmail, setSignInEmail] = useState('');
+  const [signInEmail, setSignInEmail] = useState(searchParams.get('email') || location.state?.email || '');
   const [signInPassword, setSignInPassword] = useState('');
   const [showSignInPassword, setShowSignInPassword] = useState(false);
 
   // Create Account Form State
   const [signUpForm, setSignUpForm] = useState({
     fullName: '',
-    email: '',
+    email: searchParams.get('email') || location.state?.email || '',
     phone: '',
     college: 'R V R & J C College of Engineering',
     course: 'B.Tech',
@@ -50,6 +51,25 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(location.state?.error || '');
   const [successMsg, setSuccessMsg] = useState(location.state?.message || '');
+
+  // Sync mode and prefill email whenever searchParams or location.state change
+  useEffect(() => {
+    const m = searchParams.get('mode') || searchParams.get('tab');
+    if (m === 'signup' || m === 'register' || location.state?.mode === 'signup') {
+      setMode('signup');
+    }
+    const prefillEmail = searchParams.get('email') || location.state?.email;
+    if (prefillEmail) {
+      setSignUpForm((prev) => ({ ...prev, email: prefillEmail }));
+      setSignInEmail(prefillEmail);
+    }
+    if (location.state?.error) {
+      setErrorMsg(location.state.error);
+    }
+    if (location.state?.message) {
+      setSuccessMsg(location.state.message);
+    }
+  }, [searchParams, location.state]);
 
   // If already authenticated, redirect based on role
   useEffect(() => {
