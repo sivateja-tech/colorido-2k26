@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle, Clock, Building, Sparkles } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle, Clock, Building } from 'lucide-react';
 import { submitContactMessage } from '../services/api';
 import {
   COLLEGE_NAME,
@@ -109,7 +109,7 @@ export default function ContactPage() {
 
           <div className="p-6 rounded-3xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border text-xs space-y-2">
             <p className="font-bold text-dark-text dark:text-dark-text light:text-light-text flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-brand-purple" />
+              <Building className="w-4 h-4 text-brand-purple" />
               <span>Outstation Teams Notice</span>
             </p>
             <p className="text-dark-muted leading-relaxed">

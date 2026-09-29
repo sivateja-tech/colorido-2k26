@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  ChevronDown, Search, Trophy, Sparkles, Code2, Check,
+  ChevronDown, Search, Trophy, Music, Code2, Check,
   Users, MapPin, Calendar, Clock, AlertCircle
 } from 'lucide-react';
 
@@ -55,7 +55,7 @@ export default function EventSelectDropdown({
       case 'SPORTS':
         return <Trophy className="w-3.5 h-3.5 text-emerald-400" />;
       case 'CULTURAL':
-        return <Sparkles className="w-3.5 h-3.5 text-brand-gold" />;
+        return <Music className="w-3.5 h-3.5 text-brand-gold" />;
       case 'TECHNICAL':
         return <Code2 className="w-3.5 h-3.5 text-cyan-400" />;
       default:

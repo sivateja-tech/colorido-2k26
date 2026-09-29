@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Ticket, Calendar, MapPin, ExternalLink, AlertCircle, Sparkles, RefreshCw, LogIn } from 'lucide-react';
+import { Ticket, Calendar, MapPin, ExternalLink, AlertCircle, RefreshCw, LogIn } from 'lucide-react';
 import { fetchMyRegistrations } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getStatusBadge, getCategoryBadge } from '../utils/helpers';

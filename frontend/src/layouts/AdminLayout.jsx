@@ -9,7 +9,7 @@ import {
   Mail,
   ExternalLink,
   LogOut,
-  Sparkles,
+  Layers,
   Menu,
   X
 } from 'lucide-react';
@@ -40,7 +40,7 @@ export default function AdminLayout() {
 
   const navItems = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-    { label: 'Events', path: '/admin/events', icon: Sparkles },
+    { label: 'Events', path: '/admin/events', icon: Layers },
     { label: 'Registrations', path: '/admin/registrations', icon: Users },
     { label: 'Schedule', path: '/admin/schedule', icon: Calendar },
     { label: 'Results', path: '/admin/results', icon: Trophy },

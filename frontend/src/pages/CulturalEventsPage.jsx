@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Sparkles, RefreshCw, Trophy } from 'lucide-react';
+import { Search, RefreshCw, Trophy } from 'lucide-react';
 import { fetchEvents } from '../services/api';
 import EventCard from '../components/EventCard';
 import { useDebounce } from '../hooks/useDebounce';
@@ -40,7 +40,7 @@ export default function CulturalEventsPage() {
       {/* Header */}
       <div className="space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/15 text-purple-400 border border-purple-500/30">
-          <Sparkles className="w-3.5 h-3.5" />
+          <Trophy className="w-3.5 h-3.5" />
           <span>Stage, Performing Arts &amp; Expression</span>
         </div>
         <h1 className="text-4xl sm:text-5xl font-black font-display text-dark-text dark:text-dark-text light:text-light-text tracking-tight">

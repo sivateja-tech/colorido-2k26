@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Trophy } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 export default function EasterEggCelebration({ show }) {
   if (!show) return null;

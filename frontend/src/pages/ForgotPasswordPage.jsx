@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, ArrowLeft, ArrowRight, RotateCw, AlertCircle, Sparkles, KeyRound, Check } from 'lucide-react';
+import { Mail, ArrowLeft, ArrowRight, RotateCw, AlertCircle, KeyRound, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function ForgotPasswordPage() {
@@ -143,7 +143,7 @@ export default function ForgotPasswordPage() {
               {devResetUrl && (
                 <div className="p-3.5 rounded-xl bg-brand-purple/10 border border-brand-purple/30 text-xs space-y-2 mt-2">
                   <div className="flex items-center gap-1.5 font-bold text-brand-purple text-[11px] uppercase tracking-wider">
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <KeyRound className="w-3.5 h-3.5" />
                     <span>Evaluator Direct Reset Link</span>
                   </div>
                   <p className="text-[11px] text-slate-400">

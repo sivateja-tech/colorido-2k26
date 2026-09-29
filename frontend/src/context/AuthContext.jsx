@@ -121,6 +121,14 @@ export function AuthProvider({ children }) {
       };
     } catch (err) {
       console.error('Login error:', err);
+      if (err.response?.data?.requiresVerification) {
+        return {
+          success: false,
+          requiresVerification: true,
+          email: err.response.data.email || email,
+          message: err.response.data.message || 'Your account is not activated yet. Please verify your email before logging in.'
+        };
+      }
       return {
         success: false,
         message: err.response?.data?.message || 'Invalid email or password.'
@@ -135,6 +143,17 @@ export function AuthProvider({ children }) {
     try {
       const res = await apiRegister(userData);
       if (res.data?.success) {
+        if (res.data.requiresVerification) {
+          return {
+            success: true,
+            requiresVerification: true,
+            email: res.data.email,
+            message: res.data.message,
+            verificationUrl: res.data.verificationUrl,
+            user: res.data.user
+          };
+        }
+
         const { token, role, redirectTo, user: profile } = res.data;
 
         localStorage.setItem('colorido_token', token);

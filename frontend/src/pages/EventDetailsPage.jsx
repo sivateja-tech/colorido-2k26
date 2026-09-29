@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Calendar, MapPin, Trophy, Users, ShieldAlert, CheckCircle,
-  ArrowLeft, ArrowRight, Share2, Sparkles, Clock, AlertCircle, Ticket
+  ArrowLeft, ArrowRight, Share2, LogIn, Clock, AlertCircle, Ticket
 } from 'lucide-react';
 import { fetchEventById, fetchMyRegistrations } from '../services/api';
 import EventVisualCanvas from '../components/EventVisualCanvas';
@@ -160,7 +160,7 @@ export default function EventDetailsPage() {
                   onClick={() => setAuthModalOpen(true)}
                   className="inline-flex items-center gap-2 px-7 py-3 rounded-2xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover shadow-md transition-all hover:scale-[1.02]"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <LogIn className="w-4 h-4" />
                   <span>Sign in to Register</span>
                 </button>
               )}
@@ -328,7 +328,7 @@ export default function EventDetailsPage() {
                   to={`/auth?redirect=/events/${event.id}`}
                   className="w-full py-3 rounded-xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.02]"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <LogIn className="w-4 h-4" />
                   <span>Sign in to Register</span>
                 </Link>
               )}

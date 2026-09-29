@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Sparkles, Plus, Search, Filter, Edit3, Trash2, CheckCircle2,
+  Layers, Plus, Search, Filter, Edit3, Trash2, CheckCircle2,
   XCircle, Star, Eye, EyeOff, AlertCircle, RefreshCw, X, Users,
   MapPin, Calendar, Clock, Award
 } from 'lucide-react';
@@ -191,7 +191,7 @@ export default function AdminEventsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-dark-surface dark:bg-dark-surface light:bg-light-surface p-6 rounded-2xl border border-dark-border dark:border-dark-border light:border-light-border">
         <div>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-brand-purple" />
+            <Layers className="w-5 h-5 text-brand-purple" />
             <h1 className="text-xl sm:text-2xl font-display font-black text-dark-text dark:text-dark-text light:text-light-text">
               Festival Events Management
             </h1>
@@ -488,7 +488,7 @@ export default function AdminEventsPage() {
           <div className="bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border dark:border-dark-border light:border-light-border max-w-2xl w-full rounded-2xl p-6 shadow-2xl my-8">
             <div className="flex items-center justify-between pb-4 border-b border-dark-border">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-brand-purple" />
+                <Layers className="w-5 h-5 text-brand-purple" />
                 <h3 className="text-base font-bold text-dark-text dark:text-dark-text light:text-light-text">
                   {editingEventId ? 'Edit Event Details' : 'Create New Festival Event'}
                 </h3>

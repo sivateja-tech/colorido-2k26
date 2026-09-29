@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X, Shield, LogOut, User, Ticket, Sparkles, ChevronDown } from 'lucide-react';
+import { Menu, X, Shield, LogOut, User, Ticket, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
@@ -155,7 +155,7 @@ export default function Navbar() {
                   to="/auth"
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover dark:bg-brand-purple dark:hover:bg-brand-purple-hover light:bg-brand-light-primary light:hover:bg-brand-light-hover shadow-sm transition-all"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <User className="w-3.5 h-3.5" />
                   <span>Sign In / Register</span>
                 </Link>
               )}
@@ -244,7 +244,7 @@ export default function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-brand-purple flex items-center justify-center gap-2"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <User className="w-4 h-4" />
                   <span>Sign In / Register</span>
                 </Link>
               )}

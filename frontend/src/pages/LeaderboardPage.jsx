@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Award, Building, Sparkles, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Trophy, Medal, Award, Building, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchLeaderboard } from '../services/api';
 
