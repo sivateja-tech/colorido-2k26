@@ -2,32 +2,35 @@ const prisma = require('../services/prisma');
 const { sendContactReplyEmail } = require('../services/emailService');
 
 /**
- * Public: Submit contact message
+ * Authenticated: Submit contact inquiry or complaint
+ * Strictly requires authenticated session (req.user)
  */
 async function submitContact(req, res, next) {
   try {
-    const { name, email, phone, subject, message } = req.body;
-
-    if (!name || !email || !subject || !message) {
-      return res.status(400).json({
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({
         success: false,
-        message: 'Name, email, subject, and message are all required.'
+        message: 'Authentication required. Please sign in to submit inquiries or complaints.'
       });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    const { subject, message, phone } = req.body;
+    const name = (req.body.name || user.name || 'Participant').trim();
+    const email = (user.email || req.body.email || '').toLowerCase().trim();
+
+    if (!subject || !subject.trim() || !message || !message.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide a valid email address.'
+        message: 'Subject and message are required.'
       });
     }
 
     const contact = await prisma.contactMessage.create({
       data: {
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        phone: phone ? phone.trim() : null,
+        name,
+        email,
+        phone: phone ? phone.trim() : (user.phone ? user.phone.trim() : null),
         subject: subject.trim(),
         message: message.trim(),
         status: 'UNREAD'
@@ -36,7 +39,7 @@ async function submitContact(req, res, next) {
 
     res.status(201).json({
       success: true,
-      message: 'Thank you! Your message has been sent to the COLORIDO 2K26 coordination team.',
+      message: 'Thank you! Your complaint/inquiry has been received and routed to the COLORIDO 2K26 coordination team.',
       data: contact
     });
   } catch (err) {
