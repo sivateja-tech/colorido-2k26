@@ -10,6 +10,7 @@ import {
   adminDeleteMessage
 } from '../services/api';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import BackButton from '../components/BackButton';
 
 export default function AdminMessagesPage() {
   const [messages, setMessages] = useState([]);
@@ -112,12 +113,15 @@ export default function AdminMessagesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-dark-surface dark:bg-dark-surface light:bg-light-surface p-6 rounded-2xl border border-dark-border dark:border-dark-border light:border-light-border">
-        <div>
-          <div className="flex items-center gap-2">
-            <Mail className="w-5 h-5 text-brand-purple" />
-            <h1 className="text-xl sm:text-2xl font-display font-black text-dark-text dark:text-dark-text light:text-light-text">
-              Inquiries &amp; Helpdesk Messages
-            </h1>
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <BackButton fallback="/admin/dashboard" label="Dashboard" />
+            <div className="flex items-center gap-2">
+              <Mail className="w-5 h-5 text-palette-blue" />
+              <h1 className="text-xl sm:text-2xl font-display font-black text-dark-text dark:text-dark-text light:text-light-text">
+                Inquiries &amp; Helpdesk Messages
+              </h1>
+            </div>
           </div>
           <p className="text-xs text-dark-muted mt-1">
             Incoming queries from participants, college faculty coordinators, and festival visitors.

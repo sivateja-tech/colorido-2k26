@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Ticket, Search, AlertCircle, ShieldCheck } from 'lucide-react';
 import { fetchPassById } from '../services/api';
 import DigitalPass from '../components/DigitalPass';
+import BackButton from '../components/BackButton';
 
 export default function PassPage() {
   const { id: routeId } = useParams();
@@ -44,7 +45,11 @@ export default function PassPage() {
   }, [routeId]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 sm:space-y-8">
+      <div className="flex items-center justify-between">
+        <BackButton fallback="/my-registrations" label="Back to Registrations" />
+      </div>
+
       {/* Header */}
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30">

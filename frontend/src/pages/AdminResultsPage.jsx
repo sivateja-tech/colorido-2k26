@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Trophy, Plus, Search, Filter, Edit3, Trash2, Eye, EyeOff,
   CheckCircle2, AlertCircle, RefreshCw, X, Award, Medal,
-  Building, Star
+  Building
 } from 'lucide-react';
 import {
   adminFetchResults,
@@ -13,6 +13,7 @@ import {
   adminFetchEvents
 } from '../services/api';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import BackButton from '../components/BackButton';
 
 export default function AdminResultsPage() {
   const [results, setResults] = useState([]);
@@ -188,12 +189,15 @@ export default function AdminResultsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-dark-surface dark:bg-dark-surface light:bg-light-surface p-6 rounded-2xl border border-dark-border dark:border-dark-border light:border-light-border">
-        <div>
-          <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-brand-gold" />
-            <h1 className="text-xl sm:text-2xl font-display font-black text-dark-text dark:text-dark-text light:text-light-text">
-              Winners &amp; Results Management
-            </h1>
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <BackButton fallback="/admin/dashboard" label="Dashboard" />
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-palette-orange" />
+              <h1 className="text-xl sm:text-2xl font-display font-black text-dark-text dark:text-dark-text light:text-light-text">
+                Winners &amp; Results Management
+              </h1>
+            </div>
           </div>
           <p className="text-xs text-dark-muted mt-1">
             Publish event champions, points allocations for college championship, and prize distributions.
