@@ -302,6 +302,11 @@ async function forgotPassword(req, res, next) {
           used: false
         }
       });
+
+      console.log(`\n========================================`);
+      console.log(`[PASSWORD RESET] Link generated for ${normalizedEmail}:`);
+      console.log(`http://localhost:5173/reset-password?token=${rawToken}`);
+      console.log(`========================================\n`);
     }
 
     // Generic response to prevent user enumeration
