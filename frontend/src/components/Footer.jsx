@@ -151,7 +151,7 @@ export default function Footer() {
                   <span>College Competition Showcase</span>
                 </p>
                 <p className="text-dark-muted dark:text-dark-muted light:text-light-muted leading-relaxed">
-                  Real database-driven platform with verified Google Auth, isolated passes, live countdown, and custom animated scenes.
+                 A premium event platform featuring secure authentication, digital event passes, live check-in tracking, dynamic countdowns, and custom animated experiences for Sports, Cultural, and Technical events.
                 </p>
               </div>
             </div>
