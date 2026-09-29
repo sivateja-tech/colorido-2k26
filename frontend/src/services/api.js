@@ -38,6 +38,8 @@ export const submitContactMessage = (data) => api.post('/contact', data);
 // -------------------------------------------------------------
 export const login = (email, password) => api.post('/auth/login', { email, password });
 export const register = (data) => api.post('/auth/register', data);
+export const verifyEmail = (token) => api.get('/auth/verify-email', { params: { token } });
+export const resendEmailVerification = (email) => api.post('/auth/resend-verification', { email });
 export const forgotPassword = (email) => api.post('/auth/forgot-password', { email });
 export const verifyResetToken = (token) => api.get('/auth/verify-reset-token', { params: { token } });
 export const resetPassword = (data) => api.post('/auth/reset-password', data);

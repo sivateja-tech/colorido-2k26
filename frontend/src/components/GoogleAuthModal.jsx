@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, ShieldAlert, AlertCircle, Sparkles, Mail, User, Building, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { X, ShieldAlert, AlertCircle, Shield, Mail, User, Building, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -137,7 +137,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
         {/* Modal Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex p-3 rounded-2xl bg-brand-purple/10 border border-brand-purple/20 text-brand-purple dark:text-brand-accent">
-            <Sparkles className="w-6 h-6" />
+            <Shield className="w-6 h-6" />
           </div>
           <h2 className="text-2xl font-bold font-display text-dark-text dark:text-dark-text light:text-light-text">
             Participant Sign In / Sign Up
@@ -257,7 +257,7 @@ export default function GoogleAuthModal({ isOpen, onClose, onSuccess }) {
                 onClick={autofillDemoStudent}
                 className="inline-flex items-center gap-1 text-[11px] text-brand-purple dark:text-brand-accent hover:underline"
               >
-                <Sparkles className="w-3 h-3" />
+                <Shield className="w-3 h-3" />
                 <span>Quick-fill student details</span>
               </button>
             </div>

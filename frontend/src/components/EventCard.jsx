@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, MapPin, Trophy, Users, ArrowRight, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Users, ArrowRight } from 'lucide-react';
 import EventVisualCanvas from './EventVisualCanvas';
 import { useCardGlow } from '../hooks/useCardGlow';
 import { getCategoryBadge } from '../utils/helpers';
@@ -59,8 +59,8 @@ export default function EventCard({ event }) {
             {categoryBadge.label}
           </span>
           {event.featured && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-[#E67E22]/20 text-[#E67E22] border border-[#E67E22]/40 backdrop-blur-md shadow-sm">
-              <Sparkles className="w-3 h-3 text-[#E67E22]" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-[#E67E22]/20 text-[#E67E22] border border-[#E67E22]/40 backdrop-blur-md shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#E67E22]" />
               Featured
             </span>
           )}

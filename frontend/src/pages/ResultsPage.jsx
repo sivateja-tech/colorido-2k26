@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, Medal, Search, Award, Building, Sparkles, RefreshCw, ArrowRight } from 'lucide-react';
+import { Trophy, Medal, Search, Award, Building, RefreshCw, ArrowRight } from 'lucide-react';
 import { fetchResults } from '../services/api';
 import { useDebounce } from '../hooks/useDebounce';
 import { getCategoryBadge } from '../utils/helpers';

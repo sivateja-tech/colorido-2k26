@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Phone, Mail, Globe, Shield, Sparkles } from 'lucide-react';
+import { MapPin, Phone, Mail, Globe, Shield, Trophy } from 'lucide-react';
 import {
   FESTIVAL_NAME,
   COLLEGE_NAME,
@@ -147,7 +147,7 @@ export default function Footer() {
 
               <div className="p-3.5 rounded-xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface-secondary border border-dark-border dark:border-dark-border light:border-light-border text-[11px] space-y-1">
                 <p className="font-bold text-dark-text dark:text-dark-text light:text-light-text flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-brand-purple" />
+                  <Trophy className="w-3 h-3 text-brand-purple" />
                   <span>College Competition Showcase</span>
                 </p>
                 <p className="text-dark-muted dark:text-dark-muted light:text-light-muted leading-relaxed">

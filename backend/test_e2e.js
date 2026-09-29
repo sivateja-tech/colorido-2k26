@@ -147,8 +147,8 @@ async function runTests() {
       assert(updateMsgRes.status === 200, 'Admin can resolve visitor inquiries');
     }
 
-    // 9. Unified User Registration (Privilege Escalation Prevention)
-    console.log('\n--- TEST 8: Unified User Registration & Role Enforcement ---');
+    // 9. Unified User Registration (Privilege Escalation Prevention & Email Verification Flow)
+    console.log('\n--- TEST 8: Unified User Registration & Email Verification Flow ---');
     const testRegEmail = `test_participant_${Date.now()}@rvrjc.ac.in`;
     const signupRes = await fetch(`${BASE_URL}/auth/register`, {
       method: 'POST',
@@ -158,6 +158,7 @@ async function runTests() {
         email: testRegEmail,
         phone: '9876543210',
         college: 'R V R & J C College of Engineering',
+        course: 'B.Tech',
         department: 'Computer Science & Engineering',
         year: '3rd Year B.Tech',
         password: 'Password123!',
@@ -168,11 +169,33 @@ async function runTests() {
     const signupData = await signupRes.json();
     assert(signupRes.status === 201, 'User registration succeeds with 201 Created');
     assert(signupData.role === 'USER', 'Server strictly enforces role = USER (Privilege escalation blocked)');
-    assert(signupData.redirectTo === '/events', 'Server dictates redirect to /events for USER');
-    assert(Boolean(signupData.token), 'JWT token returned upon registration');
+    assert(signupData.requiresVerification === true, 'Server enforces email activation before account login');
+    assert(Boolean(signupData.verificationUrl), 'Verification URL issued in dev mode');
 
-    // Verify User Sign-In with Unified Login
-    console.log('\n--- TEST 9: Unified Authentication — User Sign-In ---');
+    // Attempt login before verifying email (Must be blocked)
+    const prematureLoginRes = await fetch(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: testRegEmail,
+        password: 'Password123!'
+      })
+    });
+    const prematureLoginData = await prematureLoginRes.json();
+    assert(prematureLoginRes.status === 403, 'Premature login correctly blocked with 403 (Account unverified)');
+    assert(prematureLoginData.requiresVerification === true, 'Response instructs user to verify email');
+
+    // Extract token and verify email
+    const verifyTokenMatch = signupData.verificationUrl?.match(/token=([a-f0-9]+)/);
+    const rawVerifyToken = verifyTokenMatch ? verifyTokenMatch[1] : null;
+    assert(Boolean(rawVerifyToken), 'Raw activation token extracted from verification link');
+
+    const verifyEmailRes = await fetch(`${BASE_URL}/auth/verify-email?token=${rawVerifyToken}`);
+    const verifyEmailData = await verifyEmailRes.json();
+    assert(verifyEmailRes.status === 200 && verifyEmailData.success === true, 'Account activated successfully via /auth/verify-email');
+
+    // Verify User Sign-In with Unified Login after activation
+    console.log('\n--- TEST 9: Unified Authentication — User Sign-In After Activation ---');
     const userLoginRes = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -182,7 +205,7 @@ async function runTests() {
       })
     });
     const userLoginData = await userLoginRes.json();
-    assert(userLoginRes.status === 200, 'Unified login succeeds for registered user');
+    assert(userLoginRes.status === 200, 'Unified login succeeds for activated user');
     assert(userLoginData.role === 'USER', 'Role confirmed as USER');
     assert(userLoginData.redirectTo === '/events', 'Redirect confirmed as /events');
 
@@ -294,6 +317,10 @@ async function runTests() {
 
     // Select Hackathon event for User A registration
     const targetEvent = technical.find((e) => e.title.toLowerCase().includes('hackathon')) || technical[0];
+    await prisma.event.update({
+      where: { id: targetEvent.id },
+      data: { registeredCount: 0 }
+    });
 
     const regRes = await fetch(`${BASE_URL}/registrations`, {
       method: 'POST',

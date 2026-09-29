@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Code2, Sparkles, RefreshCw, Trophy } from 'lucide-react';
+import { Search, Code2, RefreshCw, Trophy } from 'lucide-react';
 import { fetchEvents } from '../services/api';
 import EventCard from '../components/EventCard';
 import { useDebounce } from '../hooks/useDebounce';

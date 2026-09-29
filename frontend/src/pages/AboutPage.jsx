@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Shield, MapPin, Building, Sparkles, CheckCircle2, Trophy, Heart } from 'lucide-react';
+import { Award, Shield, MapPin, Building, CheckCircle2, Trophy, Heart } from 'lucide-react';
 
 export default function AboutPage() {
   return (
@@ -7,7 +7,7 @@ export default function AboutPage() {
       {/* 1. Header & Vision */}
       <div className="text-center space-y-4 max-w-3xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-brand-purple/10 text-brand-purple border border-brand-purple/30">
-          <Sparkles className="w-3.5 h-3.5" />
+          <Award className="w-3.5 h-3.5" />
           <span>The Spirit Behind The Festival</span>
         </div>
         <h1 className="text-4xl sm:text-6xl font-black font-display text-white tracking-tight">
@@ -94,7 +94,7 @@ export default function AboutPage() {
 
           <div className="p-6 rounded-3xl bg-dark-800/60 dark:bg-dark-800/60 light:bg-light-surface border border-white/10 dark:border-white/10 light:border-light-border space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-brand-gold/20 flex items-center justify-center text-brand-gold">
-              <Sparkles className="w-6 h-6" />
+              <Heart className="w-6 h-6" />
             </div>
             <h4 className="text-base font-bold text-dark-text dark:text-dark-text light:text-light-text">Cultural Expression</h4>
             <p className="text-xs text-dark-muted dark:text-dark-muted light:text-light-muted leading-relaxed">

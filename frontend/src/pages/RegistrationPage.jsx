@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Sparkles, Ticket, User, Mail, Phone, Building, BookOpen, Users, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import { Ticket, User, Mail, Phone, Building, BookOpen, Users, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import { fetchEvents, registerForEvent } from '../services/api';
 import DigitalPass from '../components/DigitalPass';
 import { useAuth } from '../context/AuthContext';
@@ -158,7 +158,7 @@ export default function RegistrationPage() {
           {/* Header */}
           <div className="text-center space-y-3">
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-brand-purple/15 text-brand-purple dark:text-brand-accent">
-              <Sparkles className="w-3.5 h-3.5" />
+              <Ticket className="w-3.5 h-3.5" />
               <span>COLORIDO 2K26 Registration</span>
             </div>
             <h1 className="text-3xl sm:text-5xl font-black font-display text-dark-text dark:text-dark-text light:text-light-text tracking-tight">

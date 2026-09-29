@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Calendar, Plus, Search, Filter, Edit3, Trash2, Eye, EyeOff,
-  Radio, CheckCircle2, AlertCircle, RefreshCw, X, MapPin, Clock,
-  Sparkles
+  Radio, CheckCircle2, AlertCircle, RefreshCw, X, MapPin, Clock
 } from 'lucide-react';
 import {
   adminFetchSchedule,

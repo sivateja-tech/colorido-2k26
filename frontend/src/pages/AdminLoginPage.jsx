@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Shield, Lock, Mail, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { Shield, Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminLoginPage() {
@@ -112,7 +112,7 @@ export default function AdminLoginPage() {
               type="button"
               className="inline-flex items-center gap-1.5 text-xs text-amber-400 hover:underline"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Shield className="w-3.5 h-3.5" />
               <span>Autofill Competition Judge Admin Credentials</span>
             </button>
           </div>

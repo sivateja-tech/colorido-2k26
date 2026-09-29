@@ -9,6 +9,7 @@ import AdminLayout from './layouts/AdminLayout';
 import AuthPage from './pages/AuthPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 
 // Public Festival Pages
 import HomePage from './pages/HomePage';
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="login" element={<AuthPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
+        <Route path="verify-email" element={<VerifyEmailPage />} />
 
         {/* Helpdesk & 404 */}
         <Route path="contact" element={<ContactPage />} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Sparkles, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, MapPin, RefreshCw } from 'lucide-react';
 import { fetchSchedule } from '../services/api';
 import { getCategoryBadge } from '../utils/helpers';
 

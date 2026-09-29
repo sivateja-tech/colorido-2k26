@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Ticket, Search, AlertCircle, Sparkles } from 'lucide-react';
+import { Ticket, Search, AlertCircle, ShieldCheck } from 'lucide-react';
 import { fetchPassById } from '../services/api';
 import DigitalPass from '../components/DigitalPass';
 
@@ -101,7 +101,7 @@ export default function PassPage() {
         <div className="max-w-xl mx-auto p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-emerald-400">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5 text-emerald-400" />
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
               <p className="text-sm font-bold text-emerald-300">Official Entry Pass Verified</p>

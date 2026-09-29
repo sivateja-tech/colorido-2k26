@@ -49,6 +49,10 @@ export default function Lightbox({ image, images = [], onClose, onNext, onPrev }
         <img
           src={image.src || image.url || image}
           alt={image.title || 'Festival Moment'}
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"><rect width="800" height="600" fill="%232C3E50"/><circle cx="400" cy="270" r="70" fill="%23FFFFFF" opacity="0.1"/><text x="400" y="295" font-size="60" text-anchor="middle" font-family="sans-serif">✨</text><text x="400" y="400" font-size="24" font-weight="bold" fill="%23ECF0F1" text-anchor="middle" font-family="sans-serif">${encodeURIComponent(image.title || 'Festival Moment')}</text></svg>`;
+          }}
           className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl border border-white/10"
         />
         {(image.title || image.caption) && (

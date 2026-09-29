@@ -1,6 +1,6 @@
 import React from 'react';
 import { useCountdown } from '../hooks/useCountdown';
-import { Sparkles, Clock } from 'lucide-react';
+import { Trophy, Clock } from 'lucide-react';
 
 export default function CountdownTimer({ className = '' }) {
   const { days, hours, minutes, seconds, isStarted } = useCountdown();
@@ -8,7 +8,7 @@ export default function CountdownTimer({ className = '' }) {
   if (isStarted) {
     return (
       <div className={`inline-flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-brand-purple/20 border border-brand-purple/40 text-brand-purple dark:text-brand-accent font-bold tracking-wide shadow-glow-sm ${className}`}>
-        <Sparkles className="w-5 h-5 animate-pulse" />
+        <Trophy className="w-5 h-5 animate-pulse" />
         <span className="text-lg uppercase tracking-widest font-black">EVENT STARTED</span>
       </div>
     );

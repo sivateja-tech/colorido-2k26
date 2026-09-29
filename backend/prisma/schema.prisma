@@ -14,10 +14,12 @@ model User {
   passwordHash  String?
   profileImage  String?
   college       String?
+  course        String?        @default("B.Tech")
   department    String?
   year          String?
   phone         String?
   role          String         @default("USER")
+  isVerified    Boolean        @default(false)
   registrations Registration[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -40,6 +42,18 @@ model PasswordReset {
   email     String
   tokenHash String   @unique
   userType  String   // "USER" or "ADMIN"
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([tokenHash])
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  email     String
+  tokenHash String   @unique
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())

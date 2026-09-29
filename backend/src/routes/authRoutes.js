@@ -3,6 +3,8 @@ const router = express.Router();
 const {
   unifiedLogin,
   registerUser,
+  verifyEmail,
+  resendVerificationEmail,
   forgotPassword,
   verifyResetToken,
   resetPassword,
@@ -16,6 +18,9 @@ const { requireAdmin } = require('../middleware/adminMiddleware');
 // Unified Authentication Endpoints (Section: AUTHENTICATION — FINAL DESIGN)
 router.post('/login', unifiedLogin);
 router.post('/register', registerUser);
+router.get('/verify-email', verifyEmail);
+router.post('/verify-email', verifyEmail);
+router.post('/resend-verification', resendVerificationEmail);
 router.post('/forgot-password', forgotPassword);
 router.get('/verify-reset-token', verifyResetToken);
 router.post('/reset-password', resetPassword);

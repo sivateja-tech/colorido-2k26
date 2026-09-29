@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Sparkles, Filter, RefreshCw, Trophy } from 'lucide-react';
+import { Search, Trophy, Filter, RefreshCw } from 'lucide-react';
 import { fetchEvents } from '../services/api';
 import EventCard from '../components/EventCard';
 import { CATEGORIES } from '../utils/constants';
@@ -61,7 +61,7 @@ export default function EventsPage() {
       {/* Header */}
       <div className="text-center space-y-3 max-w-3xl mx-auto">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-purple/15 text-brand-purple dark:text-brand-accent text-xs font-bold uppercase tracking-wider">
-          <Sparkles className="w-3.5 h-3.5" />
+          <Trophy className="w-3.5 h-3.5" />
           <span>Competitions &amp; Tournaments</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-black font-display text-dark-text dark:text-dark-text light:text-light-text">
