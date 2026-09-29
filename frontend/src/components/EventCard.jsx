@@ -133,7 +133,7 @@ export default function EventCard({ event }) {
               onClick={(e) => e.stopPropagation()}
               className="py-2.5 px-3 rounded-xl text-xs font-bold text-dark-muted dark:text-dark-muted light:text-slate-400 bg-dark-elevated dark:bg-dark-elevated light:bg-slate-100 border border-dark-border light:border-slate-200 cursor-not-allowed opacity-70"
             >
-              Slots Full
+              Registration Closed
             </button>
           ) : (
             <button

@@ -205,34 +205,6 @@ export default function AuthPage() {
 
         {/* Auth Card */}
         <div className="p-6 sm:p-8 rounded-3xl bg-[#2C3E50]/80 backdrop-blur-xl border border-[#95A5A6]/20 shadow-2xl space-y-6">
-          
-          {/* STEP PROGRESSION BANNER (Create Account → Verify Email → Account Activated → Login) */}
-          <div className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 text-[10px] sm:text-xs font-bold text-center">
-            <div className={`py-1.5 px-1 rounded-xl transition-all ${
-              mode === 'signup' && !verificationPending
-                ? 'bg-[#2980B9] text-white shadow-sm'
-                : 'text-[#95A5A6]'
-            }`}>
-              1. Create
-            </div>
-            <div className={`py-1.5 px-1 rounded-xl transition-all ${
-              verificationPending || unverifiedEmail
-                ? 'bg-[#E67E22] text-white shadow-sm'
-                : 'text-[#95A5A6]'
-            }`}>
-              2. Verify
-            </div>
-            <div className="py-1.5 px-1 rounded-xl text-[#95A5A6]">
-              3. Activated
-            </div>
-            <div className={`py-1.5 px-1 rounded-xl transition-all ${
-              mode === 'signin' && !unverifiedEmail
-                ? 'bg-[#2980B9] text-white shadow-sm'
-                : 'text-[#95A5A6]'
-            }`}>
-              4. Login
-            </div>
-          </div>
 
           {/* Conditional View: When Verification is Pending after signup */}
           {verificationPending ? (

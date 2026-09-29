@@ -112,14 +112,6 @@ export default function EventSelectDropdown({
             <span className="font-bold text-xs sm:text-sm text-dark-text dark:text-dark-text light:text-light-text truncate">
               {selectedEvent.title}
             </span>
-
-            {/* Live Capacity Tag */}
-            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-dark-bg dark:bg-dark-bg light:bg-slate-200 text-dark-text-secondary shrink-0 border border-dark-border/60">
-              <Users className="w-3 h-3 text-dark-muted" />
-              <span>
-                {selectedEvent.registeredCount || selectedEvent.registered || 0} / {selectedEvent.capacity} slots
-              </span>
-            </span>
           </div>
         ) : (
           <span className="text-dark-muted text-xs">Select a festival event...</span>
@@ -231,19 +223,13 @@ export default function EventSelectDropdown({
                       </div>
                     </div>
 
-                    {/* Right side: Capacity & Check */}
+                    {/* Right side: Selection Check */}
                     <div className="flex items-center gap-2 shrink-0">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                          isFull
-                            ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                            : registered > ev.capacity * 0.8
-                            ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                            : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                        }`}
-                      >
-                        {registered}/{ev.capacity} slots
-                      </span>
+                      {isFull && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                          Full
+                        </span>
+                      )}
 
                       {isSelected && (
                         <div className="w-5 h-5 rounded-full bg-brand-purple text-white flex items-center justify-center shrink-0">

@@ -159,7 +159,7 @@ export default function AdminSchedulePage() {
             </h1>
           </div>
           <p className="text-xs text-dark-muted mt-1">
-            Organize multi-day time slots, stage allocations, and live active indicators for COLORIDO 2K26.
+            Organize multi-day program timelines, stage allocations, and live active indicators for COLORIDO 2K26.
           </p>
         </div>
 

@@ -91,7 +91,7 @@ export default function SchedulePage() {
         <div className="p-12 text-center rounded-2xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border space-y-2">
           <Calendar className="w-10 h-10 text-dark-muted mx-auto opacity-50" />
           <h3 className="text-base font-bold text-dark-text dark:text-dark-text light:text-light-text">
-            No schedule slots found
+            No schedule events found
           </h3>
           <p className="text-xs text-dark-text-secondary">Try switching the category filter.</p>
         </div>
