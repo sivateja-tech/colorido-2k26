@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const prisma = require('../services/prisma');
 const config = require('../config');
+const { sendPasswordResetEmail } = require('../services/emailService');
 
 /**
  * UNIFIED LOGIN (Section: AUTHENTICATION — FINAL DESIGN)
@@ -303,9 +304,21 @@ async function forgotPassword(req, res, next) {
         }
       });
 
+      const targetName = admin?.name || user?.name || 'Participant';
+      const resetPath = `/reset-password?token=${rawToken}`;
+
+      // Dispatch real email via Gmail SMTP
+      sendPasswordResetEmail({
+        to: normalizedEmail,
+        resetUrl: resetPath,
+        name: targetName
+      }).catch((emailErr) => {
+        console.error('[EMAIL ERROR] Failed to dispatch password reset email:', emailErr.message);
+      });
+
       console.log(`\n========================================`);
       console.log(`[PASSWORD RESET] Link generated for ${normalizedEmail}:`);
-      console.log(`http://localhost:5173/reset-password?token=${rawToken}`);
+      console.log(`http://localhost:5173${resetPath}`);
       console.log(`========================================\n`);
     }
 

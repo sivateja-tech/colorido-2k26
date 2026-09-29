@@ -20,7 +20,8 @@
     "express-rate-limit": "^7.5.0",
     "google-auth-library": "^9.15.1",
     "helmet": "^8.0.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^10.0.12"
   },
   "devDependencies": {
     "prisma": "^5.22.0"
