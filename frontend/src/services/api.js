@@ -89,6 +89,7 @@ export const adminTogglePublishResult = (id) => api.patch(`/admin/results/${id}/
 // Admin Messages
 export const adminFetchMessages = (params) => api.get('/admin/messages', { params });
 export const adminUpdateMessageStatus = (id, status) => api.patch(`/admin/messages/${id}/status`, { status });
+export const adminReplyToMessage = (id, data) => api.post(`/admin/messages/${id}/reply`, data);
 export const adminDeleteMessage = (id) => api.delete(`/admin/messages/${id}`);
 
 // Convenience Aliases for Admin

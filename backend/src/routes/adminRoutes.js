@@ -33,6 +33,7 @@ const {
 const {
   getContactMessages,
   updateContactStatus,
+  replyContactMessage,
   deleteContactMessage
 } = require('../controllers/contactController');
 
@@ -81,6 +82,8 @@ router.patch('/results/:id/publish', togglePublishResult);
 // Contact Messages Management (Section 56)
 router.get('/messages', getContactMessages);
 router.patch('/messages/:id/status', updateContactStatus);
+router.post('/messages/:id/reply', replyContactMessage);
 router.delete('/messages/:id', deleteContactMessage);
 
 module.exports = router;
+

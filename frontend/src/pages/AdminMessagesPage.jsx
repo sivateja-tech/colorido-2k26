@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import {
   Mail, Search, Filter, Trash2, CheckCircle2, Clock,
   AlertCircle, RefreshCw, X, MessageSquare, User, Phone,
-  Calendar, CheckCheck
+  Calendar, CheckCheck, Send, MessageCircle, ExternalLink
 } from 'lucide-react';
 import {
   adminFetchMessages,
   adminUpdateMessageStatus,
+  adminReplyToMessage,
   adminDeleteMessage
 } from '../services/api';
 import LoadingSkeleton from '../components/LoadingSkeleton';
@@ -25,6 +26,11 @@ export default function AdminMessagesPage() {
   // Active / Selected Message
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  // In-App Reply Form State
+  const [replyText, setReplyText] = useState('');
+  const [replySubject, setReplySubject] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
 
   const loadMessages = async () => {
     try {
@@ -81,6 +87,35 @@ export default function AdminMessagesPage() {
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
       setError('Failed to delete message.');
+    }
+  };
+
+  const handleSendReply = async (e) => {
+    e.preventDefault();
+    if (!selectedMessage || !replyText.trim()) return;
+
+    setSendingReply(true);
+    setError(null);
+
+    try {
+      const res = await adminReplyToMessage(selectedMessage.id, {
+        replyText: replyText.trim(),
+        subject: replySubject.trim() || `Re: ${selectedMessage.subject} — COLORIDO 2K26 Helpdesk`
+      });
+
+      if (res.data?.success) {
+        setSuccessMsg(`Official response dispatched to ${selectedMessage.email} and inquiry marked as RESOLVED!`);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === selectedMessage.id ? { ...m, status: 'RESOLVED' } : m))
+        );
+        setSelectedMessage((prev) => ({ ...prev, status: 'RESOLVED' }));
+        setReplyText('');
+        setTimeout(() => setSuccessMsg(''), 4500);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to dispatch email reply.');
+    } finally {
+      setSendingReply(false);
     }
   };
 
@@ -210,6 +245,8 @@ export default function AdminMessagesPage() {
                   key={msg.id}
                   onClick={() => {
                     setSelectedMessage(msg);
+                    setReplySubject(`Re: ${msg.subject} — COLORIDO 2K26 Helpdesk`);
+                    setReplyText('');
                     if (msg.status === 'UNREAD') {
                       handleStatusChange(msg.id, 'READ');
                     }
@@ -325,18 +362,93 @@ export default function AdminMessagesPage() {
                   </div>
                 </div>
 
-                {/* Reply action */}
-                <div className="pt-4 border-t border-dark-border flex items-center justify-between">
-                  <span className="text-[11px] text-dark-muted">
-                    Reply directly to participant via email
-                  </span>
-                  <a
-                    href={`mailto:${selectedMessage.email}?subject=Re: ${encodeURIComponent(selectedMessage.subject)} - COLORIDO 2K26`}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-brand-purple text-white hover:bg-brand-purple-hover transition-colors"
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>Send Email Reply</span>
-                  </a>
+                {/* In-App Direct Email Reply & Resolution */}
+                <div className="pt-5 border-t border-dark-border space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div className="flex items-center gap-2">
+                      <Send className="w-4 h-4 text-[#2980B9]" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-dark-text">
+                        Respond Directly to Participant
+                      </h4>
+                    </div>
+                    <span className="text-[11px] text-dark-muted">
+                      Sends official email from COLORIDO 2K26 Helpdesk
+                    </span>
+                  </div>
+
+                  <form onSubmit={handleSendReply} className="space-y-3">
+                    <div>
+                      <input
+                        type="text"
+                        value={replySubject}
+                        onChange={(e) => setReplySubject(e.target.value)}
+                        placeholder="Email Subject"
+                        className="w-full px-3.5 py-2 rounded-xl text-xs bg-dark-bg border border-dark-border text-dark-text focus:outline-none focus:border-[#2980B9]"
+                      />
+                    </div>
+
+                    <div>
+                      <textarea
+                        rows={4}
+                        required
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Type official reply message here... The participant will receive this as an official branded email with your solution."
+                        className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-dark-bg border border-dark-border text-dark-text placeholder:text-dark-muted focus:outline-none focus:border-[#2980B9] leading-relaxed resize-y"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="submit"
+                          disabled={sendingReply || !replyText.trim()}
+                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#2980B9] hover:bg-[#1F618D] shadow-md shadow-[#2980B9]/20 transition-all disabled:opacity-50"
+                        >
+                          {sendingReply ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Send className="w-3.5 h-3.5" />
+                          )}
+                          <span>{sendingReply ? 'Dispatching...' : 'Send Official Email Reply & Resolve'}</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs">
+                        {selectedMessage.phone && (
+                          <>
+                            <a
+                              href={`tel:${selectedMessage.phone}`}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-elevated text-dark-text border border-dark-border hover:border-emerald-500 hover:text-emerald-400 text-xs font-semibold transition-colors"
+                              title="Call directly"
+                            >
+                              <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Call</span>
+                            </a>
+                            <a
+                              href={`https://wa.me/${selectedMessage.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${selectedMessage.name}, regarding your COLORIDO 2K26 inquiry: `)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 text-xs font-semibold transition-colors"
+                              title="Message on WhatsApp"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>WhatsApp</span>
+                            </a>
+                          </>
+                        )}
+
+                        <a
+                          href={`mailto:${selectedMessage.email}?subject=${encodeURIComponent(replySubject || `Re: ${selectedMessage.subject} - COLORIDO 2K26`)}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-elevated text-dark-muted hover:text-dark-text border border-dark-border text-xs font-semibold transition-colors"
+                          title="Open in mail client (mailto)"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Client App</span>
+                        </a>
+                      </div>
+                    </div>
+                  </form>
                 </div>
               </div>
             ) : (
