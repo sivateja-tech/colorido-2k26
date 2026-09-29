@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { fetchEventById, fetchMyRegistrations } from '../services/api';
 import EventVisualCanvas from '../components/EventVisualCanvas';
+import BackButton from '../components/BackButton';
 import { useAuth } from '../context/AuthContext';
 import { getCategoryBadge } from '../utils/helpers';
 
@@ -170,13 +171,7 @@ export default function EventDetailsPage() {
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-10 space-y-6 sm:space-y-8">
       {/* Top Bar: Back & Share (Mobile-optimized) */}
       <div className="flex items-center justify-between gap-2">
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-[#ECF0F1] bg-[#2C3E50] hover:bg-[#34495E] border border-[#95A5A6]/20 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back</span>
-        </button>
+        <BackButton fallback="/events" label="Back to Events" />
 
         <div className="flex items-center gap-2">
           <button
@@ -686,6 +681,85 @@ export default function EventDetailsPage() {
           </div>
         )}
 
+      </div>
+
+      {/* Bottom Registration Callout Card */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-palette-midnight via-palette-midnight to-palette-blue/20 border border-palette-blue/40 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-palette-orange">Official Championship Entry</span>
+          <h3 className="text-xl sm:text-2xl font-black font-display text-white">Ready to Compete in {event.title}?</h3>
+          <p className="text-xs text-palette-clouds/70 max-w-xl">
+            Registrations are open across 50+ colleges. Review the rounds and guidelines above, then secure your official digital pass.
+          </p>
+        </div>
+        <div className="shrink-0">
+          {userRegistration ? (
+            <Link
+              to={`/pass/${userRegistration.registrationId || userRegistration.id}`}
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 transition-all"
+            >
+              <Ticket className="w-4 h-4" />
+              <span>View Registration Pass</span>
+            </Link>
+          ) : isFull ? (
+            <div className="px-6 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-dark-muted bg-dark-bg border border-dark-border text-center cursor-not-allowed">
+              Registration Closed
+            </div>
+          ) : isAuthenticated ? (
+            <Link
+              to={`/register?event=${event.id}`}
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-palette-blue hover:bg-palette-blue/90 shadow-lg shadow-palette-blue/25 transition-all hover:scale-[1.02]"
+            >
+              <span>Register for Event</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          ) : (
+            <Link
+              to={`/auth?redirect=/events/${event.id}`}
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-palette-blue hover:bg-palette-blue/90 shadow-lg shadow-palette-blue/25 transition-all hover:scale-[1.02]"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>Sign In to Register</span>
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* Sticky Bottom Bar for Mobile (< sm) */}
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-[#2C3E50]/95 backdrop-blur-md border-t border-[#95A5A6]/20 p-3 px-4 flex items-center justify-between shadow-2xl">
+        <div className="truncate pr-2">
+          <div className="text-xs font-bold text-white truncate">{event.title}</div>
+          <div className="text-[10px] text-palette-orange font-bold font-mono">Prize: {event.prizePool}</div>
+        </div>
+        <div className="shrink-0">
+          {userRegistration ? (
+            <Link
+              to={`/pass/${userRegistration.registrationId || userRegistration.id}`}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md inline-flex items-center gap-1.5"
+            >
+              <Ticket className="w-3.5 h-3.5" />
+              <span>View Pass</span>
+            </Link>
+          ) : isFull ? (
+            <span className="px-3 py-2 text-xs font-bold text-palette-clouds/50">Full</span>
+          ) : isAuthenticated ? (
+            <Link
+              to={`/register?event=${event.id}`}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-palette-blue hover:bg-palette-blue/90 shadow-md inline-flex items-center gap-1.5 active:scale-95"
+            >
+              <span>Register</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          ) : (
+            <Link
+              to={`/auth?redirect=/events/${event.id}`}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-palette-blue hover:bg-palette-blue/90 shadow-md inline-flex items-center gap-1.5 active:scale-95"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Register</span>
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );

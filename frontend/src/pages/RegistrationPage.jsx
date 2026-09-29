@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Ticket, User, Mail, Phone, Building, BookOpen, Users, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import { fetchEvents, registerForEvent } from '../services/api';
 import DigitalPass from '../components/DigitalPass';
+import BackButton from '../components/BackButton';
 import { useAuth } from '../context/AuthContext';
 import EventSelectDropdown from '../components/EventSelectDropdown';
 
@@ -154,7 +155,11 @@ export default function RegistrationPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
+          <div className="flex items-center justify-between">
+            <BackButton fallback={formData.eventId ? `/events/${formData.eventId}` : '/events'} label={formData.eventId ? "Back to Event" : "Back to Events"} />
+          </div>
+
           {/* Header */}
           <div className="text-center space-y-3">
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-brand-purple/15 text-brand-purple dark:text-brand-accent">

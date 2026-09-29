@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, ArrowRight, RotateCw, AlertCircle, KeyRound, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import BackButton from '../components/BackButton';
 
 export default function ForgotPasswordPage() {
   const { forgotPassword } = useAuth();
@@ -56,6 +57,10 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full space-y-6">
+        <div className="flex items-center justify-start">
+          <BackButton fallback="/auth" label="Back to Sign In" />
+        </div>
+
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-2xl bg-brand-purple/10 border border-brand-purple/20 text-brand-purple mx-auto flex items-center justify-center mb-3">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Medal, Award, Building, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchLeaderboard } from '../services/api';
+import BackButton from '../components/BackButton';
 
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState([]);
@@ -44,13 +45,7 @@ export default function LeaderboardPage() {
           </p>
         </div>
 
-        <Link
-          to="/results"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-dark-elevated hover:bg-dark-highest border border-dark-border text-dark-text transition-all shrink-0"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Event Results</span>
-        </Link>
+        <BackButton fallback="/results" label="Back to Results" />
       </div>
 
       {/* Error state */}

@@ -14,6 +14,7 @@ import {
   adminToggleFeaturedEvent
 } from '../services/api';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import BackButton from '../components/BackButton';
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState([]);
@@ -343,12 +344,15 @@ export default function AdminEventsPage() {
     <div className="space-y-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-dark-surface dark:bg-dark-surface light:bg-light-surface p-5 sm:p-6 rounded-2xl border border-dark-border dark:border-dark-border light:border-light-border shadow-sm">
-        <div>
-          <div className="flex items-center gap-2">
-            <Layers className="w-5 h-5 text-palette-blue" />
-            <h1 className="text-xl sm:text-2xl font-display font-black text-dark-text dark:text-dark-text light:text-light-text">
-              Event Management &amp; Structures
-            </h1>
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <BackButton fallback="/admin/dashboard" label="Dashboard" />
+            <div className="flex items-center gap-2">
+              <Layers className="w-5 h-5 text-palette-blue" />
+              <h1 className="text-xl sm:text-2xl font-display font-black text-dark-text dark:text-dark-text light:text-light-text">
+                Event Management &amp; Structures
+              </h1>
+            </div>
           </div>
           <p className="text-xs text-dark-muted mt-1">
             Configure multi-round competition structures, event organizers with direct contact, rules, and schedules.

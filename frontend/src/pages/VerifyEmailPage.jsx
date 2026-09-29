@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, AlertCircle, RotateCw, Mail, ArrowRight, ShieldCheck, KeyRound } from 'lucide-react';
 import { verifyEmail, resendEmailVerification } from '../services/api';
+import BackButton from '../components/BackButton';
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
@@ -69,6 +70,10 @@ export default function VerifyEmailPage() {
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full space-y-6">
+        <div className="flex items-center justify-start">
+          <BackButton fallback="/auth" label="Back to Sign In" />
+        </div>
+
         {/* Header */}
         <div className="text-center space-y-2">
           <Link to="/" className="inline-flex items-center gap-2 group mb-2">

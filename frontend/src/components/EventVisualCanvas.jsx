@@ -10,9 +10,11 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
   const type = visualType?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'cricket';
 
   return (
-    <div className={`relative w-full h-full overflow-hidden flex items-center justify-center select-none bg-gradient-to-b from-[#2C3E50] to-[#1A252F] dark:from-[#131722] dark:to-[#0D1017] light:from-[#F0F2F7] light:to-[#E5E9F0] ${className}`}>
-      {/* Dynamic ambient backdrop grid & glow */}
-      <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#2980B9_1px,transparent_1px)] [background-size:16px_16px]" />
+    <div className={`relative w-full h-full overflow-hidden flex items-center justify-center select-none bg-gradient-to-b from-[#1A252F] via-[#2C3E50] to-[#1A252F] dark:from-[#1A252F] dark:via-[#2C3E50] dark:to-[#1A252F] light:from-[#ECF0F1] light:via-[#FFFFFF] light:to-[#D5DBDB] ${className}`}>
+      {/* Dynamic ambient backdrop radial glow & geometric grid */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#2980B9_1px,transparent_1px)] [background-size:18px_18px]" />
+      <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#E67E22]/12 rounded-full blur-2xl pointer-events-none transition-opacity duration-500 group-hover:opacity-100 opacity-40" />
+      <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-[#2980B9]/18 rounded-full blur-2xl pointer-events-none transition-opacity duration-500 group-hover:opacity-100 opacity-50" />
 
       {/* ============================================================
           SPORTS ANIMATIONS (Sections 26 - 34)

@@ -4,6 +4,7 @@ import { Ticket, Calendar, MapPin, ExternalLink, AlertCircle, RefreshCw, LogIn }
 import { fetchMyRegistrations } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getStatusBadge, getCategoryBadge } from '../utils/helpers';
+import BackButton from '../components/BackButton';
 
 export default function MyRegistrationsPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -46,6 +47,9 @@ export default function MyRegistrationsPage() {
   if (!authLoading && !isAuthenticated) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-6">
+        <div className="flex justify-start">
+          <BackButton fallback="/events" label="Back to Events" />
+        </div>
         <div className="w-16 h-16 rounded-3xl bg-brand-purple/15 text-brand-purple flex items-center justify-center mx-auto">
           <Ticket className="w-8 h-8" />
         </div>
@@ -69,7 +73,11 @@ export default function MyRegistrationsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 sm:space-y-8">
+      <div className="flex items-center justify-between">
+        <BackButton fallback="/events" label="Back to Events" />
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

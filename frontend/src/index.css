@@ -73,14 +73,57 @@
   border-bottom: 1px solid rgba(149, 165, 166, 0.35);
 }
 
-/* Interactive Card with Cursor Edge Tracking */
+/* Interactive Card with Cursor Edge Tracking & Depth */
 .card-cursor-glow {
   position: relative;
-  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s ease;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .card-cursor-glow:hover {
-  transform: translateY(-4px);
+  transform: translateY(-6px);
+}
+
+/* Subtle, performant ambient animations for competition event scenes */
+@keyframes ambientGlowPulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.65; transform: scale(1.04); }
+}
+
+@keyframes subtleFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes subtleSway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(2deg); }
+}
+
+@keyframes scanlinePulse {
+  0% { transform: translateY(-100%); opacity: 0; }
+  50% { opacity: 0.6; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes audioBarPulse {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+.animate-ambient-glow {
+  animation: ambientGlowPulse 4s ease-in-out infinite;
+}
+
+.animate-subtle-float {
+  animation: subtleFloat 3s ease-in-out infinite;
+}
+
+.animate-subtle-sway {
+  animation: subtleSway 4s ease-in-out infinite;
+}
+
+.animate-scanline {
+  animation: scanlinePulse 3s linear infinite;
 }
 
 /* Custom scrollbars */
@@ -104,7 +147,7 @@
 
 /* Accessibility: respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *, ::before, ::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

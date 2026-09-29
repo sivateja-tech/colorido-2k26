@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { resendEmailVerification } from '../services/api';
+import BackButton from '../components/BackButton';
 
 export default function AuthPage() {
   const [searchParams] = useSearchParams();
@@ -178,7 +179,11 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-8 sm:py-16">
-      <div className="max-w-xl w-full space-y-8">
+      <div className="max-w-xl w-full space-y-6 sm:space-y-8">
+        <div className="flex items-center justify-start">
+          <BackButton fallback="/" label="Back to Home" />
+        </div>
+
         {/* Header */}
         <div className="text-center space-y-3">
           <Link to="/" className="inline-flex items-center gap-2 group">

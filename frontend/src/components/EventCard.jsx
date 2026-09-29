@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, MapPin, Trophy, Users, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, MapPin, Trophy, Users, ArrowRight, Eye, Sparkles } from 'lucide-react';
 import EventVisualCanvas from './EventVisualCanvas';
 import { useCardGlow } from '../hooks/useCardGlow';
 import { getCategoryBadge } from '../utils/helpers';
@@ -10,18 +10,10 @@ export default function EventCard({ event }) {
   const [isHovered, setIsHovered] = useState(false);
   const { cardRef, handleMouseMove } = useCardGlow();
   const categoryBadge = getCategoryBadge(event.category);
-  const capacity = event.capacity || 50;
-  const registeredCount = event.registeredCount || 0;
-  const percentFilled = Math.min(100, Math.round((registeredCount / capacity) * 100));
-  const isFull = registeredCount >= capacity;
 
-  // Clicking anywhere on the card navigates directly to register
+  // IMPORTANT EVENT FLOW: Clicking card ALWAYS opens Event Details page first
   const handleCardClick = () => {
-    if (isFull) {
-      navigate(`/events/${event.slug || event.id}`);
-    } else {
-      navigate(`/register?event=${event.id}`);
-    }
+    navigate(`/events/${event.slug || event.id}`);
   };
 
   return (
@@ -39,28 +31,33 @@ export default function EventCard({ event }) {
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="card-cursor-glow group relative flex flex-col rounded-3xl cursor-pointer select-none bg-dark-surface dark:bg-dark-surface light:bg-white border border-dark-border dark:border-dark-border light:border-slate-200 hover:border-brand-purple/70 dark:hover:border-brand-purple/70 light:hover:border-brand-light-primary/70 shadow-lg hover:shadow-2xl light:shadow-sm light:hover:shadow-xl hover:-translate-y-1.5 overflow-hidden transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple"
-      title={`Click anywhere to register for ${event.title}`}
+      className="card-cursor-glow group relative flex flex-col rounded-3xl cursor-pointer select-none bg-dark-surface dark:bg-dark-surface light:bg-white border border-dark-border dark:border-dark-border light:border-slate-200 hover:border-palette-blue/80 dark:hover:border-palette-blue/80 light:hover:border-palette-blue/80 shadow-lg hover:shadow-2xl light:shadow-sm light:hover:shadow-xl hover:-translate-y-2 active:scale-[0.98] overflow-hidden transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-palette-blue"
+      title={`Click to view tournament details for ${event.title}`}
       style={{
-        background: `radial-gradient(450px circle at var(--mouse-x, 150px) var(--mouse-y, 150px), rgba(41, 128, 185, 0.12), transparent 45%)`
+        background: `radial-gradient(450px circle at var(--mouse-x, 150px) var(--mouse-y, 150px), rgba(41, 128, 185, 0.14), transparent 45%)`
       }}
     >
-      {/* Visual Canvas Scene */}
-      <div className="relative h-52 sm:h-56 w-full overflow-hidden bg-[#1A252F] dark:bg-[#1A252F] light:bg-[#ECF0F1] border-b border-dark-border dark:border-dark-border light:border-slate-200">
-        <EventVisualCanvas
-          visualType={event.visualType || event.type || event.slug}
-          isHovered={isHovered}
-        />
+      {/* Visual Canvas Scene with Depth & Smooth Interaction */}
+      <div className="relative h-52 sm:h-60 w-full overflow-hidden bg-gradient-to-b from-[#1A252F] to-[#2C3E50] dark:from-[#1A252F] dark:to-[#2C3E50] light:from-[#ECF0F1] light:to-[#D5DBDB] border-b border-dark-border dark:border-dark-border light:border-slate-200">
+        {/* Ambient Top Light Beam */}
+        <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-palette-blue/15 to-transparent pointer-events-none z-10 transition-opacity duration-300 group-hover:opacity-100 opacity-60" />
+
+        <div className="w-full h-full transform transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+          <EventVisualCanvas
+            visualType={event.visualType || event.type || event.slug}
+            isHovered={isHovered}
+          />
+        </div>
 
         {/* Category & Featured Badges */}
         <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md border ${categoryBadge.bg}`}>
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md border shadow-sm ${categoryBadge.bg}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${categoryBadge.dot}`} />
             {categoryBadge.label}
           </span>
           {event.featured && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-[#E67E22]/20 text-[#E67E22] border border-[#E67E22]/40 backdrop-blur-md shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#E67E22]" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-palette-orange/20 text-palette-orange border border-palette-orange/40 backdrop-blur-md shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-palette-orange animate-pulse" />
               Featured
             </span>
           )}
@@ -68,17 +65,17 @@ export default function EventCard({ event }) {
 
         {/* Prize Pool Tag */}
         {event.prizePool && (
-          <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-dark-bg/90 dark:bg-dark-bg/90 light:bg-white/95 border border-[#E67E22]/30 text-[#E67E22] text-xs font-bold backdrop-blur-md shadow-sm">
-            <Trophy className="w-3.5 h-3.5 text-[#E67E22]" />
-            <span>Prize Pool: {event.prizePool}</span>
+          <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-bg/90 dark:bg-dark-bg/90 light:bg-white/95 border border-palette-orange/35 text-palette-orange text-xs font-bold backdrop-blur-md shadow-md">
+            <Trophy className="w-3.5 h-3.5 text-palette-orange" />
+            <span>Prize: {event.prizePool}</span>
           </div>
         )}
 
         {/* Hover Hint Overlay Pill */}
-        <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-brand-purple/90 light:bg-brand-light-primary text-white shadow-md backdrop-blur-sm">
-            <span>Click to Register</span>
-            <ArrowRight className="w-3 h-3" />
+        <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-y-1 group-hover:translate-y-0">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-palette-blue text-white shadow-lg backdrop-blur-sm">
+            <Eye className="w-3 h-3" />
+            <span>Explore Event</span>
           </span>
         </div>
       </div>
@@ -86,10 +83,10 @@ export default function EventCard({ event }) {
       {/* Card Body & Details */}
       <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between space-y-4">
         <div>
-          <h3 className="text-xl font-bold font-display text-dark-text dark:text-dark-text light:text-slate-900 group-hover:text-brand-purple dark:group-hover:text-brand-accent light:group-hover:text-brand-light-primary transition-colors line-clamp-1">
+          <h3 className="text-xl font-bold font-display text-dark-text dark:text-dark-text light:text-slate-900 group-hover:text-palette-blue dark:group-hover:text-palette-blue light:group-hover:text-palette-blue transition-colors line-clamp-1">
             {event.title}
           </h3>
-          <p className="mt-2 text-sm text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-600 line-clamp-2 leading-relaxed">
+          <p className="mt-2 text-xs sm:text-sm text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-600 line-clamp-2 leading-relaxed">
             {event.shortDescription || event.description}
           </p>
         </div>
@@ -97,57 +94,33 @@ export default function EventCard({ event }) {
         {/* Meta Info */}
         <div className="space-y-2.5 text-xs text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-600 border-t border-dark-border dark:border-dark-border light:border-slate-200 pt-3">
           <div className="flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-brand-secondary light:text-brand-light-secondary shrink-0" />
-            <span className="truncate">{event.date} • {event.startTime}</span>
+            <Calendar className="w-3.5 h-3.5 text-palette-blue shrink-0" />
+            <span className="truncate font-medium">{event.date || 'March 28, 2026'} • {event.startTime || '10:00 AM'}</span>
           </div>
           <div className="flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5 text-brand-error shrink-0" />
+            <MapPin className="w-3.5 h-3.5 text-palette-orange shrink-0" />
             <span className="truncate">{event.venue}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 pt-1 text-slate-400">
-            <Users className="w-3.5 h-3.5 text-brand-purple shrink-0" />
-            <span>
+          <div className="flex items-center gap-1.5 pt-0.5 text-dark-muted">
+            <Users className="w-3.5 h-3.5 text-palette-blue shrink-0" />
+            <span className="font-medium">
               {event.participantType === 'TEAM'
-                ? `Team Event (${event.minTeamSize || 2}-${event.maxTeamSize || 4} members)`
+                ? `Team Competition (${event.minTeamSize || 2}-${event.maxTeamSize || 4} members)`
                 : 'Individual / Solo Competition'}
             </span>
           </div>
         </div>
 
-        {/* Action CTAs */}
-        <div className="grid grid-cols-2 gap-2.5 pt-1">
-          {/* View Details button (stops propagation so user can view details specifically) */}
-          <Link
-            to={`/events/${event.slug || event.id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold text-dark-text dark:text-dark-text light:text-slate-800 bg-dark-elevated dark:bg-dark-elevated light:bg-slate-100 hover:bg-dark-highest dark:hover:bg-dark-highest light:hover:bg-slate-200 border border-dark-border dark:border-dark-border light:border-slate-300 transition-all"
+        {/* Action Button: Opens Event Details Page First */}
+        <div className="pt-2">
+          <button
+            type="button"
+            className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-palette-blue hover:bg-palette-blue/90 shadow-md group-hover:shadow-palette-blue/25 flex items-center justify-center gap-2 transition-all duration-200"
           >
-            <span>View Details</span>
-          </Link>
-
-          {/* Register CTA (also triggers on card click) */}
-          {isFull ? (
-            <button
-              disabled
-              onClick={(e) => e.stopPropagation()}
-              className="py-2.5 px-3 rounded-xl text-xs font-bold text-dark-muted dark:text-dark-muted light:text-slate-400 bg-dark-elevated dark:bg-dark-elevated light:bg-slate-100 border border-dark-border light:border-slate-200 cursor-not-allowed opacity-70"
-            >
-              Registration Closed
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCardClick();
-              }}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold text-white bg-brand-purple dark:bg-brand-purple light:bg-brand-light-primary hover:bg-brand-purple-hover dark:hover:bg-brand-purple-hover light:hover:bg-brand-light-hover group-hover:bg-brand-purple-hover dark:group-hover:bg-brand-purple-hover light:group-hover:bg-brand-light-hover shadow-md transition-all"
-            >
-              <span>Register</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          )}
+            <span>View Event Details</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+          </button>
         </div>
       </div>
     </div>

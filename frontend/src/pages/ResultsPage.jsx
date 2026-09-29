@@ -4,6 +4,7 @@ import { Trophy, Medal, Search, Award, Building, RefreshCw, ArrowRight } from 'l
 import { fetchResults } from '../services/api';
 import { useDebounce } from '../hooks/useDebounce';
 import { getCategoryBadge } from '../utils/helpers';
+import BackButton from '../components/BackButton';
 
 export default function ResultsPage() {
   const [results, setResults] = useState([]);
@@ -67,7 +68,11 @@ export default function ResultsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-6 sm:space-y-8">
+      <div className="flex items-center justify-between">
+        <BackButton fallback="/" label="Back to Home" />
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-2">
