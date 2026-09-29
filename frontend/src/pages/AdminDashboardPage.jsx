@@ -173,7 +173,7 @@ export default function AdminDashboardPage() {
         </div>
         <button
           onClick={loadDashboard}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 transition-colors w-fit"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 border border-dark-border text-slate-200 transition-colors w-fit"
         >
           <RefreshCw className="w-3.5 h-3.5 text-brand-purple" />
           <span>Refresh Metrics</span>
@@ -182,7 +182,7 @@ export default function AdminDashboardPage() {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-dark-900 border border-white/10 space-y-1">
+        <div className="p-5 rounded-2xl bg-dark-surface border border-dark-border space-y-1">
           <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
             <span>Total Events</span>
             <Trophy className="w-4 h-4 text-brand-purple" />
@@ -193,7 +193,7 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-dark-900 border border-white/10 space-y-1">
+        <div className="p-5 rounded-2xl bg-dark-surface border border-dark-border space-y-1">
           <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
             <span>Total Registrations</span>
             <Users className="w-4 h-4 text-brand-cyan" />
@@ -204,7 +204,7 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-dark-900 border border-white/10 space-y-1">
+        <div className="p-5 rounded-2xl bg-dark-surface border border-dark-border space-y-1">
           <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
             <span>Capacity Utilized</span>
             <Calendar className="w-4 h-4 text-amber-400" />
@@ -215,7 +215,7 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-dark-900 border border-white/10 space-y-1">
+        <div className="p-5 rounded-2xl bg-dark-surface border border-dark-border space-y-1">
           <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
             <span>Inquiries</span>
             <Mail className="w-4 h-4 text-rose-400" />
@@ -228,7 +228,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-dark-border pb-3 overflow-x-auto">
         <button
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -267,7 +267,7 @@ export default function AdminDashboardPage() {
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Event Capacity Fill Stats */}
-          <div className="p-6 rounded-3xl bg-dark-900 border border-white/10 space-y-4">
+          <div className="p-6 rounded-3xl bg-dark-surface border border-dark-border space-y-4">
             <h3 className="text-lg font-bold text-white font-display">
               Live Tournament Capacity Utilisation
             </h3>
@@ -290,7 +290,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Recent Registrations Feed */}
-          <div className="p-6 rounded-3xl bg-dark-900 border border-white/10 space-y-4">
+          <div className="p-6 rounded-3xl bg-dark-surface border border-dark-border space-y-4">
             <h3 className="text-lg font-bold text-white font-display">
               Recent Pass Issuances
             </h3>
@@ -314,7 +314,7 @@ export default function AdminDashboardPage() {
 
       {/* TAB 2: REGISTRATIONS */}
       {activeTab === 'registrations' && (
-        <div className="p-6 rounded-3xl bg-dark-900 border border-white/10 space-y-4">
+        <div className="p-6 rounded-3xl bg-dark-surface border border-dark-border space-y-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <h3 className="text-lg font-bold text-white">All Issued Registrations</h3>
             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -323,7 +323,7 @@ export default function AdminDashboardPage() {
                 placeholder="Search by Pass ID, Name, College..."
                 value={regSearch}
                 onChange={e => setRegSearch(e.target.value)}
-                className="px-3 py-1.5 rounded-xl bg-dark-950 border border-white/10 text-xs text-white focus:outline-none focus:border-brand-purple w-full sm:w-64"
+                className="px-3 py-1.5 rounded-xl bg-dark-950 border border-dark-border text-xs text-white focus:outline-none focus:border-brand-purple w-full sm:w-64"
               />
               <button
                 onClick={loadRegistrations}
@@ -370,7 +370,7 @@ export default function AdminDashboardPage() {
                         <select
                           value={reg.status}
                           onChange={e => handleStatusUpdate(reg.id, e.target.value)}
-                          className="px-2 py-1 rounded bg-dark-800 border border-white/10 text-[10px] text-slate-200"
+                          className="px-2 py-1 rounded bg-dark-800 border border-dark-border text-[10px] text-slate-200"
                         >
                           <option value="CONFIRMED">CONFIRMED</option>
                           <option value="ATTENDED">ATTENDED</option>
@@ -388,7 +388,7 @@ export default function AdminDashboardPage() {
 
       {/* TAB 3: EVENT MANAGEMENT */}
       {activeTab === 'events' && (
-        <div className="p-6 rounded-3xl bg-dark-900 border border-white/10 space-y-4">
+        <div className="p-6 rounded-3xl bg-dark-surface border border-dark-border space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-white">Event Catalog</h3>
             <button
@@ -445,7 +445,7 @@ export default function AdminDashboardPage() {
 
       {/* TAB 4: CONTACT MESSAGES */}
       {activeTab === 'messages' && (
-        <div className="p-6 rounded-3xl bg-dark-900 border border-white/10 space-y-4">
+        <div className="p-6 rounded-3xl bg-dark-surface border border-dark-border space-y-4">
           <h3 className="text-lg font-bold text-white">Student Inquiries</h3>
 
           {msgLoading ? (
@@ -477,7 +477,7 @@ export default function AdminDashboardPage() {
       {/* CREATE EVENT MODAL */}
       {showEventModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-dark-900 border border-white/10 rounded-3xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto space-y-4">
+          <div className="bg-dark-surface border border-dark-border rounded-3xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto space-y-4">
             <h3 className="text-lg font-bold text-white">Create New Festival Event</h3>
             <form onSubmit={handleCreateEvent} className="space-y-3 text-xs">
               <div>
@@ -487,7 +487,7 @@ export default function AdminDashboardPage() {
                   required
                   value={newEvent.title}
                   onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
-                  className="w-full p-2.5 rounded-xl bg-dark-950 border border-white/10 text-white"
+                  className="w-full p-2.5 rounded-xl bg-dark-950 border border-dark-border text-white"
                 />
               </div>
 
@@ -497,7 +497,7 @@ export default function AdminDashboardPage() {
                   <select
                     value={newEvent.category}
                     onChange={e => setNewEvent({ ...newEvent, category: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-white/10 text-white"
+                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-dark-border text-white"
                   >
                     <option value="SPORTS">SPORTS</option>
                     <option value="CULTURAL">CULTURAL</option>
@@ -510,7 +510,7 @@ export default function AdminDashboardPage() {
                     required
                     value={newEvent.type}
                     onChange={e => setNewEvent({ ...newEvent, type: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-white/10 text-white"
+                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-dark-border text-white"
                   />
                 </div>
               </div>
@@ -522,7 +522,7 @@ export default function AdminDashboardPage() {
                   required
                   value={newEvent.shortDescription}
                   onChange={e => setNewEvent({ ...newEvent, shortDescription: e.target.value })}
-                  className="w-full p-2.5 rounded-xl bg-dark-950 border border-white/10 text-white"
+                  className="w-full p-2.5 rounded-xl bg-dark-950 border border-dark-border text-white"
                 />
               </div>
 
@@ -534,7 +534,7 @@ export default function AdminDashboardPage() {
                     required
                     value={newEvent.venue}
                     onChange={e => setNewEvent({ ...newEvent, venue: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-white/10 text-white"
+                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-dark-border text-white"
                   />
                 </div>
                 <div>
@@ -544,7 +544,7 @@ export default function AdminDashboardPage() {
                     required
                     value={newEvent.prizePool}
                     onChange={e => setNewEvent({ ...newEvent, prizePool: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-white/10 text-white"
+                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-dark-border text-white"
                   />
                 </div>
               </div>
@@ -557,7 +557,7 @@ export default function AdminDashboardPage() {
                     required
                     value={newEvent.demoDate}
                     onChange={e => setNewEvent({ ...newEvent, demoDate: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-white/10 text-white"
+                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-dark-border text-white"
                   />
                 </div>
                 <div>
@@ -567,7 +567,7 @@ export default function AdminDashboardPage() {
                     required
                     value={newEvent.demoTime}
                     onChange={e => setNewEvent({ ...newEvent, demoTime: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-white/10 text-white"
+                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-dark-border text-white"
                   />
                 </div>
               </div>
@@ -579,7 +579,7 @@ export default function AdminDashboardPage() {
                     type="number"
                     value={newEvent.capacity}
                     onChange={e => setNewEvent({ ...newEvent, capacity: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-white/10 text-white"
+                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-dark-border text-white"
                   />
                 </div>
                 <div>
@@ -587,7 +587,7 @@ export default function AdminDashboardPage() {
                   <select
                     value={newEvent.participantType}
                     onChange={e => setNewEvent({ ...newEvent, participantType: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-white/10 text-white"
+                    className="w-full p-2.5 rounded-xl bg-dark-950 border border-dark-border text-white"
                   >
                     <option value="INDIVIDUAL">INDIVIDUAL</option>
                     <option value="TEAM">TEAM</option>

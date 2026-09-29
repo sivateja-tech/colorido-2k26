@@ -42,11 +42,11 @@ export default function EventCard({ event }) {
       className="card-cursor-glow group relative flex flex-col rounded-3xl cursor-pointer select-none bg-dark-surface dark:bg-dark-surface light:bg-white border border-dark-border dark:border-dark-border light:border-slate-200 hover:border-brand-purple/70 dark:hover:border-brand-purple/70 light:hover:border-brand-light-primary/70 shadow-lg hover:shadow-2xl light:shadow-sm light:hover:shadow-xl hover:-translate-y-1.5 overflow-hidden transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple"
       title={`Click anywhere to register for ${event.title}`}
       style={{
-        background: `radial-gradient(450px circle at var(--mouse-x, 150px) var(--mouse-y, 150px), rgba(109, 90, 230, 0.08), transparent 45%)`
+        background: `radial-gradient(450px circle at var(--mouse-x, 150px) var(--mouse-y, 150px), rgba(41, 128, 185, 0.12), transparent 45%)`
       }}
     >
       {/* Visual Canvas Scene */}
-      <div className="relative h-52 sm:h-56 w-full overflow-hidden bg-[#0A0C10] dark:bg-[#0A0C10] light:bg-[#F1F3F7] border-b border-dark-border dark:border-dark-border light:border-slate-200">
+      <div className="relative h-52 sm:h-56 w-full overflow-hidden bg-[#1A252F] dark:bg-[#1A252F] light:bg-[#ECF0F1] border-b border-dark-border dark:border-dark-border light:border-slate-200">
         <EventVisualCanvas
           visualType={event.visualType || event.type || event.slug}
           isHovered={isHovered}
@@ -59,8 +59,8 @@ export default function EventCard({ event }) {
             {categoryBadge.label}
           </span>
           {event.featured && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-amber-500/20 text-amber-300 light:bg-amber-100 light:text-amber-800 border border-amber-500/40 light:border-amber-300 backdrop-blur-md shadow-sm">
-              <Sparkles className="w-3 h-3 text-amber-400 light:text-amber-600" />
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-[#E67E22]/20 text-[#E67E22] border border-[#E67E22]/40 backdrop-blur-md shadow-sm">
+              <Sparkles className="w-3 h-3 text-[#E67E22]" />
               Featured
             </span>
           )}
@@ -68,8 +68,8 @@ export default function EventCard({ event }) {
 
         {/* Prize Pool Tag */}
         {event.prizePool && (
-          <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-dark-bg/90 dark:bg-dark-bg/90 light:bg-white/95 border border-amber-500/30 light:border-amber-300 text-amber-400 light:text-amber-800 text-xs font-bold backdrop-blur-md shadow-sm">
-            <Trophy className="w-3.5 h-3.5 text-amber-400 light:text-amber-600" />
+          <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-dark-bg/90 dark:bg-dark-bg/90 light:bg-white/95 border border-[#E67E22]/30 text-[#E67E22] text-xs font-bold backdrop-blur-md shadow-sm">
+            <Trophy className="w-3.5 h-3.5 text-[#E67E22]" />
             <span>Prize Pool: {event.prizePool}</span>
           </div>
         )}

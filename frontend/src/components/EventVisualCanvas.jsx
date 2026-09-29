@@ -10,9 +10,9 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
   const type = visualType?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'cricket';
 
   return (
-    <div className={`relative w-full h-full overflow-hidden flex items-center justify-center select-none bg-gradient-to-b from-[#131722] to-[#0D1017] dark:from-[#131722] dark:to-[#0D1017] light:from-[#F0F2F7] light:to-[#E5E9F0] ${className}`}>
+    <div className={`relative w-full h-full overflow-hidden flex items-center justify-center select-none bg-gradient-to-b from-[#2C3E50] to-[#1A252F] dark:from-[#131722] dark:to-[#0D1017] light:from-[#F0F2F7] light:to-[#E5E9F0] ${className}`}>
       {/* Dynamic ambient backdrop grid & glow */}
-      <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#6D5AE6_1px,transparent_1px)] [background-size:16px_16px]" />
+      <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#2980B9_1px,transparent_1px)] [background-size:16px_16px]" />
 
       {/* ============================================================
           SPORTS ANIMATIONS (Sections 26 - 34)
@@ -297,9 +297,9 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
               }}
             >
               <g transform="translate(82, 35)">
-                <rect x="2" y="24" width="14" height="4" rx="1" fill="#6D5AE6" />
+                <rect x="2" y="24" width="14" height="4" rx="1" fill="#2980B9" />
                 {/* Horse profile */}
-                <path d="M 4 24 Q 2 12 8 8 Q 12 6 15 10 Q 17 14 13 18 L 14 24 Z" fill="#6D5AE6" stroke="#9B8AFB" strokeWidth="1" />
+                <path d="M 4 24 Q 2 12 8 8 Q 12 6 15 10 Q 17 14 13 18 L 14 24 Z" fill="#2980B9" stroke="#E67E22" strokeWidth="1" />
                 <circle cx="9" cy="11" r="1" fill="#FFFFFF" />
               </g>
             </g>
@@ -411,14 +411,14 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
               {/* Head */}
               <circle cx="26" cy="10" r="7" fill="#F59E0B" />
               {/* Torso forward lean */}
-              <path d="M 12 18 L 30 16 L 25 36 L 15 36 Z" fill="#6D5AE6" />
+              <path d="M 12 18 L 30 16 L 25 36 L 15 36 Z" fill="#2980B9" />
               {/* Pumping Arms */}
               <line x1="16" y1="20" x2="4" y2="30" stroke="#F59E0B" strokeWidth="3" strokeLinecap="round" />
               <line x1="28" y1="18" x2="40" y2="26" stroke="#F59E0B" strokeWidth="3" strokeLinecap="round" />
               {/* Powerful Stride Legs */}
-              <line x1="18" y1="36" x2="8" y2="52" stroke="#6D5AE6" strokeWidth="3.5" strokeLinecap="round" />
-              <line x1="24" y1="36" x2="38" y2="44" stroke="#6D5AE6" strokeWidth="3.5" strokeLinecap="round" />
-              <line x1="38" y1="44" x2="34" y2="54" stroke="#6D5AE6" strokeWidth="3" strokeLinecap="round" />
+              <line x1="18" y1="36" x2="8" y2="52" stroke="#2980B9" strokeWidth="3.5" strokeLinecap="round" />
+              <line x1="24" y1="36" x2="38" y2="44" stroke="#2980B9" strokeWidth="3.5" strokeLinecap="round" />
+              <line x1="38" y1="44" x2="34" y2="54" stroke="#2980B9" strokeWidth="3" strokeLinecap="round" />
             </g>
           </g>
         </svg>
@@ -431,7 +431,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
       {/* 10. DANCE: dancer silhouette */}
       {(type.includes('dance')) && (
         <svg viewBox="0 0 400 220" className="w-full h-full max-h-56">
-          <ellipse cx="200" cy="185" rx="120" ry="25" fill="#6D5AE6" opacity="0.2" />
+          <ellipse cx="200" cy="185" rx="120" ry="25" fill="#2980B9" opacity="0.2" />
           <g
             className="transition-transform duration-500 ease-out origin-bottom"
             style={{
@@ -466,7 +466,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
             <line x1="15" y1="75" x2="15" y2="135" stroke="#94A3B8" strokeWidth="3" />
             <ellipse cx="15" cy="135" rx="20" ry="6" fill="#334155" />
             {/* Mic body & grille */}
-            <rect x="8" y="25" width="14" height="40" rx="7" fill="#1E293B" stroke="#6D5AE6" strokeWidth="2" />
+            <rect x="8" y="25" width="14" height="40" rx="7" fill="#1E293B" stroke="#2980B9" strokeWidth="2" />
             <circle cx="15" cy="22" r="11" fill="#475569" stroke="#E2E8F0" strokeWidth="1.5" />
             {/* Grille lines */}
             <line x1="7" y1="20" x2="23" y2="20" stroke="#CBD5E1" strokeWidth="1" />
@@ -492,7 +492,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
           >
             <g transform="translate(185, 80)">
               <circle cx="15" cy="15" r="8" fill="#F59E0B" />
-              <path d="M 8 26 L 22 26 L 20 65 L 10 65 Z" fill="#6D5AE6" />
+              <path d="M 8 26 L 22 26 L 20 65 L 10 65 Z" fill="#2980B9" />
               {/* Acoustic Guitar */}
               <ellipse cx="28" cy="46" rx="10" ry="14" fill="#D97706" stroke="#78350F" strokeWidth="1.5" />
               <line x1="28" y1="46" x2="38" y2="20" stroke="#E2E8F0" strokeWidth="2" />
@@ -562,7 +562,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
             style={{ transform: isHovered ? 'translate(10px, -5px) rotate(6deg)' : 'translate(0, 0)' }}
           >
             <g transform="translate(220, 65)">
-              <ellipse cx="25" cy="35" rx="22" ry="28" fill="#F8FAFC" stroke="#6D5AE6" strokeWidth="2" />
+              <ellipse cx="25" cy="35" rx="22" ry="28" fill="#F8FAFC" stroke="#2980B9" strokeWidth="2" />
               {/* Happy eyes & smile */}
               <path d="M 14 26 Q 18 22 22 26" fill="none" stroke="#1E293B" strokeWidth="2" strokeLinecap="round" />
               <path d="M 28 26 Q 32 22 36 26" fill="none" stroke="#1E293B" strokeWidth="2" strokeLinecap="round" />
@@ -577,8 +577,8 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
         <svg viewBox="0 0 400 220" className="w-full h-full max-h-56">
           {/* Perspective Runway with LED side strips */}
           <polygon points="175,70 225,70 290,220 110,220" fill="#181D26" stroke="#475569" strokeWidth="1" />
-          <line x1="175" y1="70" x2="110" y2="220" stroke="#9B8AFB" strokeWidth="2" opacity="0.8" />
-          <line x1="225" y1="70" x2="290" y2="220" stroke="#9B8AFB" strokeWidth="2" opacity="0.8" />
+          <line x1="175" y1="70" x2="110" y2="220" stroke="#E67E22" strokeWidth="2" opacity="0.8" />
+          <line x1="225" y1="70" x2="290" y2="220" stroke="#E67E22" strokeWidth="2" opacity="0.8" />
 
           {/* Model silhouette strutting forward */}
           <g
@@ -616,13 +616,13 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
 
           {/* DSLR Pro Camera Body */}
           <g transform="translate(135, 60)">
-            <rect x="0" y="25" width="130" height="85" rx="14" fill="#1E2430" stroke="#6D5AE6" strokeWidth="2.5" />
+            <rect x="0" y="25" width="130" height="85" rx="14" fill="#1E2430" stroke="#2980B9" strokeWidth="2.5" />
             {/* Viewfinder hump */}
-            <path d="M 45 25 L 55 10 L 75 10 L 85 25 Z" fill="#11151C" stroke="#6D5AE6" strokeWidth="2" />
+            <path d="M 45 25 L 55 10 L 75 10 L 85 25 Z" fill="#11151C" stroke="#2980B9" strokeWidth="2" />
             {/* Shutter button */}
             <rect x="18" y="16" width="14" height="9" rx="2" fill="#E05D65" />
             {/* Large Lens with reflections */}
-            <circle cx="65" cy="68" r="32" fill="#0A0C10" stroke="#6D5AE6" strokeWidth="4" />
+            <circle cx="65" cy="68" r="32" fill="#0A0C10" stroke="#2980B9" strokeWidth="4" />
             <circle cx="65" cy="68" r="22" fill="#181D26" stroke="#4D7CFE" strokeWidth="2" />
             <circle cx="65" cy="68" r="12" fill="#0F172A" />
             {/* Glass glint */}
@@ -646,7 +646,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
           <path
             d="M 130 95 C 170 55 210 135 260 85"
             fill="none"
-            stroke="#9B8AFB"
+            stroke="#E67E22"
             strokeWidth={isHovered ? "8" : "4"}
             strokeLinecap="round"
             className="transition-all duration-500"
@@ -662,7 +662,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
             <g transform="translate(210, 50)">
               <rect x="0" y="0" width="6" height="55" rx="3" fill="#B45309" stroke="#78350F" strokeWidth="1" />
               <rect x="-1" y="55" width="8" height="12" fill="#CBD5E1" />
-              <path d="M -1 67 L 7 67 L 4 80 L 1 80 Z" fill="#9B8AFB" />
+              <path d="M -1 67 L 7 67 L 4 80 L 1 80 Z" fill="#E67E22" />
             </g>
           </g>
         </svg>
@@ -675,11 +675,11 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
             {/* Card screen */}
             <rect x="0" y="0" width="200" height="120" rx="12" fill="#181D26" stroke="#475569" strokeWidth="2" />
             {/* Question mark or Check mark */}
-            <text x="100" y="55" textAnchor="middle" fill="#9B8AFB" fontSize="36" fontWeight="bold" fontFamily="sans-serif">
+            <text x="100" y="55" textAnchor="middle" fill="#E67E22" fontSize="36" fontWeight="bold" fontFamily="sans-serif">
               {isHovered ? "CORRECT!" : "Q & A"}
             </text>
             {/* Buzzer button */}
-            <rect x="30" y="75" width="140" height="28" rx="6" fill={isHovered ? "#35B779" : "#6D5AE6"} className="transition-colors duration-300" />
+            <rect x="30" y="75" width="140" height="28" rx="6" fill={isHovered ? "#35B779" : "#2980B9"} className="transition-colors duration-300" />
             <text x="100" y="93" textAnchor="middle" fill="#FFFFFF" fontSize="12" fontWeight="bold">
               {isHovered ? "✓ 100 POINTS" : "PRESS BUZZER"}
             </text>
@@ -710,7 +710,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
                 transform: isHovered ? 'translate(-15px, -15px) rotate(-15deg)' : 'translate(0, 0)'
               }}
             >
-              <path d="M 130 10 Q 155 -15 170 10 Q 140 25 125 50 Z" fill="#6D5AE6" />
+              <path d="M 130 10 Q 155 -15 170 10 Q 140 25 125 50 Z" fill="#2980B9" />
               <line x1="125" y1="50" x2="110" y2="70" stroke="#CBD5E1" strokeWidth="2" />
             </g>
           </g>
@@ -731,7 +731,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
             <rect x="30" y="22" width="55" height="4" rx="2" fill="#4D7CFE" />
             <rect x="30" y="32" width="75" height="4" rx="2" fill="#35B779" />
             <rect x="40" y="42" width="60" height="4" rx="2" fill="#E5A93D" />
-            <rect x="40" y="52" width="45" height="4" rx="2" fill="#9B8AFB" />
+            <rect x="40" y="52" width="45" height="4" rx="2" fill="#E67E22" />
             {/* Animated typing cursor */}
             <rect
               x={isHovered ? "88" : "30"}
@@ -762,7 +762,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
 
             {/* Line numbers and code */}
             <text x="14" y="48" fill="#737C8C" fontSize="10" fontFamily="monospace">01</text>
-            <text x="32" y="48" fill="#9B8AFB" fontSize="10" fontFamily="monospace">int solve(int n) &#123;</text>
+            <text x="32" y="48" fill="#E67E22" fontSize="10" fontFamily="monospace">int solve(int n) &#123;</text>
 
             <text x="14" y="65" fill="#737C8C" fontSize="10" fontFamily="monospace">02</text>
             <text x="44" y="65" fill="#4D7CFE" fontSize="10" fontFamily="monospace">dp[n] = dp[n-1] + ...;</text>
@@ -771,7 +771,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
             <text x="44" y="82" fill="#35B779" fontSize="10" fontFamily="monospace">return dp[n];</text>
 
             <text x="14" y="99" fill="#737C8C" fontSize="10" fontFamily="monospace">04</text>
-            <text x="32" y="99" fill="#9B8AFB" fontSize="10" fontFamily="monospace">&#125;</text>
+            <text x="32" y="99" fill="#E67E22" fontSize="10" fontFamily="monospace">&#125;</text>
 
             {/* Dynamic cursor */}
             <rect x={isHovered ? "115" : "55"} y="90" width="6" height="12" fill="#35B779" className="animate-pulse" />
@@ -842,12 +842,12 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
         <svg viewBox="0 0 400 220" className="w-full h-full max-h-56">
           <g transform="translate(125, 35)">
             {/* Presentation Slide Frame */}
-            <rect x="0" y="0" width="150" height="110" rx="6" fill="#1E2430" stroke="#6D5AE6" strokeWidth="2" />
-            <rect x="15" y="18" width="120" height="12" rx="3" fill="#6D5AE6" />
+            <rect x="0" y="0" width="150" height="110" rx="6" fill="#1E2430" stroke="#2980B9" strokeWidth="2" />
+            <rect x="15" y="18" width="120" height="12" rx="3" fill="#2980B9" />
             {/* Chart in slide */}
             <rect x="25" y="70" width="14" height="25" fill="#4D7CFE" />
             <rect x="45" y="55" width="14" height="40" fill="#35B779" />
-            <rect x="65" y="45" width="14" height="50" fill="#9B8AFB" />
+            <rect x="65" y="45" width="14" height="50" fill="#E67E22" />
             <rect x="85" y="35" width="14" height="60" fill="#E5A93D" />
             {/* Slide stand */}
             <line x1="75" y1="110" x2="75" y2="150" stroke="#64748B" strokeWidth="3" />
@@ -888,12 +888,12 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
         <svg viewBox="0 0 400 220" className="w-full h-full max-h-56">
           <g transform="translate(110, 30)">
             {/* Mobile Wireframe */}
-            <rect x="0" y="0" width="85" height="150" rx="14" fill="#11151C" stroke="#9B8AFB" strokeWidth="2" />
+            <rect x="0" y="0" width="85" height="150" rx="14" fill="#11151C" stroke="#E67E22" strokeWidth="2" />
             {/* Notch */}
             <rect x="25" y="6" width="35" height="5" rx="2.5" fill="#334155" />
             {/* Wireframe blocks */}
             <rect x="10" y="22" width="65" height="24" rx="4" fill="#1E2430" />
-            <circle cx="24" cy="65" r="10" fill="#6D5AE6" />
+            <circle cx="24" cy="65" r="10" fill="#2980B9" />
             <circle cx="60" cy="65" r="10" fill="#4D7CFE" />
             <rect x="10" y="88" width="65" height="42" rx="4" fill="#181D26" stroke="#475569" strokeWidth="1" strokeDasharray="3 2" />
 
@@ -925,7 +925,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
             <text x="60" y="16" fill="#737C8C" fontSize="9" fontFamily="monospace">https://colorido2k26.dev</text>
 
             {/* Rendered elements in browser */}
-            <rect x="20" y="40" width="80" height="35" rx="4" fill="#6D5AE6" opacity="0.8" />
+            <rect x="20" y="40" width="80" height="35" rx="4" fill="#2980B9" opacity="0.8" />
             <rect x="110" y="40" width="100" height="8" rx="2" fill="#CBD5E1" />
             <rect x="110" y="54" width="85" height="6" rx="2" fill="#64748B" />
             <rect x="110" y="65" width="60" height="6" rx="2" fill="#64748B" />
@@ -940,17 +940,17 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
         <svg viewBox="0 0 400 220" className="w-full h-full max-h-56">
           <g transform="translate(90, 45)">
             {/* Network Connections */}
-            <line x1="30" y1="20" x2="110" y2="40" stroke="#6D5AE6" strokeWidth="1.5" opacity="0.6" />
-            <line x1="30" y1="65" x2="110" y2="40" stroke="#6D5AE6" strokeWidth="1.5" opacity="0.6" />
-            <line x1="30" y1="110" x2="110" y2="90" stroke="#6D5AE6" strokeWidth="1.5" opacity="0.6" />
+            <line x1="30" y1="20" x2="110" y2="40" stroke="#2980B9" strokeWidth="1.5" opacity="0.6" />
+            <line x1="30" y1="65" x2="110" y2="40" stroke="#2980B9" strokeWidth="1.5" opacity="0.6" />
+            <line x1="30" y1="110" x2="110" y2="90" stroke="#2980B9" strokeWidth="1.5" opacity="0.6" />
 
             <line x1="110" y1="40" x2="190" y2="65" stroke="#4D7CFE" strokeWidth="1.5" opacity="0.6" />
             <line x1="110" y1="90" x2="190" y2="65" stroke="#4D7CFE" strokeWidth="1.5" opacity="0.6" />
 
             {/* Input layer nodes */}
-            <circle cx="30" cy="20" r="9" fill="#6D5AE6" stroke="#9B8AFB" strokeWidth="2" />
-            <circle cx="30" cy="65" r="9" fill="#6D5AE6" stroke="#9B8AFB" strokeWidth="2" />
-            <circle cx="30" cy="110" r="9" fill="#6D5AE6" stroke="#9B8AFB" strokeWidth="2" />
+            <circle cx="30" cy="20" r="9" fill="#2980B9" stroke="#E67E22" strokeWidth="2" />
+            <circle cx="30" cy="65" r="9" fill="#2980B9" stroke="#E67E22" strokeWidth="2" />
+            <circle cx="30" cy="110" r="9" fill="#2980B9" stroke="#E67E22" strokeWidth="2" />
 
             {/* Hidden layer nodes */}
             <circle
@@ -999,7 +999,7 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
               }}
             >
               <g transform="translate(95, 20)">
-                <rect x="0" y="0" width="50" height="75" rx="8" fill="#6D5AE6" stroke="#9B8AFB" strokeWidth="2" />
+                <rect x="0" y="0" width="50" height="75" rx="8" fill="#2980B9" stroke="#E67E22" strokeWidth="2" />
                 <text x="25" y="42" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold">BATON</text>
                 <text x="25" y="58" textAnchor="middle" fill="#CBD5E1" fontSize="9">&lt;/&gt;</text>
               </g>
@@ -1021,8 +1021,8 @@ export default function EventVisualCanvas({ visualType = 'cricket', isHovered = 
         'hackathon', 'coding', 'debugging', 'techquiz', 'paper', 'projectexpo', 'expo', 'project', 'uiux', 'design', 'webdev', 'web', 'aiml', 'ai', 'neural', 'coderelay', 'relay'
       ].some(k => type.includes(k))) && (
         <svg viewBox="0 0 400 220" className="w-full h-full max-h-56">
-          <circle cx="200" cy="110" r="45" fill="none" stroke="#6D5AE6" strokeWidth="2" strokeDasharray="4 4" />
-          <circle cx="200" cy="110" r="25" fill="#181D26" stroke="#9B8AFB" strokeWidth="2" />
+          <circle cx="200" cy="110" r="45" fill="none" stroke="#2980B9" strokeWidth="2" strokeDasharray="4 4" />
+          <circle cx="200" cy="110" r="25" fill="#181D26" stroke="#E67E22" strokeWidth="2" />
           <text x="200" y="115" textAnchor="middle" fill="#FFFFFF" fontSize="13" fontWeight="bold">COLORIDO</text>
         </svg>
       )}

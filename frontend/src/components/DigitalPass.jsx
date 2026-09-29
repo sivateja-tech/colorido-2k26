@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Download, Share2, Printer, CheckCircle2, ShieldCheck, MapPin, Calendar, Clock, User, Building, Award, ExternalLink } from 'lucide-react';
+import { Share2, Printer, CheckCircle2, ShieldCheck, MapPin, Calendar, Clock, User, Building, Award, ExternalLink } from 'lucide-react';
 
 export default function DigitalPass({ pass }) {
   const printRef = useRef(null);
@@ -49,29 +49,29 @@ export default function DigitalPass({ pass }) {
 
   return (
     <div className="w-full max-w-xl mx-auto space-y-4">
-      {/* Pass Card */}
+      {/* Pass Card with #2C3E50 and #1A252F palette */}
       <div
         ref={printRef}
-        className="relative bg-gradient-to-b from-[#121626] to-[#0a0c14] border border-brand-purple/40 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-brand-purple/15 overflow-hidden text-slate-100"
+        className="relative bg-gradient-to-b from-[#2C3E50] to-[#1A252F] border border-[#2980B9]/40 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-[#2980B9]/15 overflow-hidden text-[#ECF0F1]"
       >
-        {/* Holographic glowing background effect */}
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-brand-purple/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-brand-cyan/20 rounded-full blur-3xl pointer-events-none" />
+        {/* Holographic glowing background effect using #2980B9 and #E67E22 */}
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#2980B9]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-[#E67E22]/15 rounded-full blur-3xl pointer-events-none" />
 
         {/* Header: Institution & Brand */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-5">
+        <div className="flex items-center justify-between border-b border-[#95A5A6]/20 pb-5">
           <div className="flex items-center gap-3">
             <img
               src="/rvrjc_logo.png"
               alt="R V R & J C College of Engineering"
-              className="w-12 h-12 object-contain bg-white/5 p-1 rounded-xl border border-white/10"
+              className="w-12 h-12 object-contain bg-[#1A252F]/70 p-1 rounded-xl border border-[#95A5A6]/20"
             />
             <div>
-              <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#95A5A6]">
                 R V R &amp; J C College of Engineering
               </p>
-              <h2 className="text-xl sm:text-2xl font-black font-display tracking-tight text-white">
-                COLORIDO <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-purple to-brand-cyan">2K26</span>
+              <h2 className="text-xl sm:text-2xl font-black font-display tracking-tight text-[#ECF0F1]">
+                COLORIDO <span className="text-[#E67E22]">2K26</span>
               </h2>
             </div>
           </div>
@@ -84,16 +84,16 @@ export default function DigitalPass({ pass }) {
         </div>
 
         {/* Pass ID Display Banner */}
-        <div className="my-5 p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
+        <div className="my-5 p-3.5 rounded-2xl bg-[#1A252F]/70 border border-[#95A5A6]/20 flex items-center justify-between">
           <div>
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Registration Pass ID</span>
-            <div className="text-2xl sm:text-3xl font-mono font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-amber-200">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#95A5A6]">Registration Pass ID</span>
+            <div className="text-2xl sm:text-3xl font-mono font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-[#E67E22] via-[#F39C12] to-[#ECF0F1]">
               {pass.registrationId}
             </div>
           </div>
-          <div className="text-right text-xs text-slate-400">
-            <span className="block text-[10px] uppercase font-semibold text-slate-400">Category</span>
-            <span className="font-bold text-brand-cyan uppercase tracking-wider">{event.category || 'EVENT'}</span>
+          <div className="text-right text-xs text-[#95A5A6]">
+            <span className="block text-[10px] uppercase font-semibold text-[#95A5A6]">Category</span>
+            <span className="font-bold text-[#2980B9] uppercase tracking-wider">{event.category || 'EVENT'}</span>
           </div>
         </div>
 
@@ -114,14 +114,14 @@ export default function DigitalPass({ pass }) {
                 level="M"
                 includeMargin={true}
                 bgColor="#FFFFFF"
-                fgColor="#0A0C14"
+                fgColor="#2C3E50"
               />
-              <div className="mt-1.5 flex items-center justify-center gap-1 text-[10px] font-mono font-bold text-dark-900 group-hover:text-brand-purple tracking-wider transition-colors">
+              <div className="mt-1.5 flex items-center justify-center gap-1 text-[10px] font-mono font-bold text-[#2C3E50] group-hover:text-[#2980B9] tracking-wider transition-colors">
                 <span>SCAN / VERIFY</span>
                 <ExternalLink className="w-2.5 h-2.5 opacity-70" />
               </div>
             </a>
-            <span className="mt-2 text-[10px] text-slate-400 font-mono tracking-wider text-center">
+            <span className="mt-2 text-[10px] text-[#95A5A6] font-mono tracking-wider text-center">
               Official Entry QR
             </span>
           </div>
@@ -129,48 +129,48 @@ export default function DigitalPass({ pass }) {
           {/* Attendee Info */}
           <div className="sm:col-span-2 space-y-3">
             <div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                <User className="w-3.5 h-3.5 text-brand-purple" />
+              <div className="flex items-center gap-1.5 text-xs text-[#95A5A6]">
+                <User className="w-3.5 h-3.5 text-[#2980B9]" />
                 <span>Participant</span>
               </div>
-              <p className="text-lg font-bold text-white tracking-wide">{pass.fullName}</p>
+              <p className="text-lg font-bold text-[#ECF0F1] tracking-wide">{pass.fullName}</p>
             </div>
 
             <div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                <Building className="w-3.5 h-3.5 text-brand-cyan" />
+              <div className="flex items-center gap-1.5 text-xs text-[#95A5A6]">
+                <Building className="w-3.5 h-3.5 text-[#95A5A6]" />
                 <span>Institution</span>
               </div>
-              <p className="text-sm font-medium text-slate-200 line-clamp-1">{pass.college}</p>
-              <p className="text-xs text-slate-400">{pass.department} • {pass.year}</p>
+              <p className="text-sm font-medium text-[#ECF0F1] line-clamp-1">{pass.college}</p>
+              <p className="text-xs text-[#BDC3C7]">{pass.department} • {pass.year}</p>
             </div>
 
             {pass.teamName && (
               <div>
-                <span className="text-xs text-slate-400">Team Name</span>
-                <p className="text-sm font-semibold text-amber-300">{pass.teamName}</p>
+                <span className="text-xs text-[#95A5A6]">Team Name</span>
+                <p className="text-sm font-semibold text-[#E67E22]">{pass.teamName}</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Event Details Card */}
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2.5">
+        <div className="p-4 rounded-2xl bg-[#1A252F]/70 border border-[#95A5A6]/20 space-y-2.5">
           <div className="flex items-center gap-2">
-            <Award className="w-4 h-4 text-brand-purple" />
-            <h4 className="text-base font-bold text-white">{event.title || 'Official Festival Competition'}</h4>
+            <Award className="w-4 h-4 text-[#E67E22]" />
+            <h4 className="text-base font-bold text-[#ECF0F1]">{event.title || 'Official Festival Competition'}</h4>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#BDC3C7]">
             <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-brand-cyan" />
+              <Calendar className="w-3.5 h-3.5 text-[#2980B9]" />
               <span>{event.date || event.demoDate || 'March 20-22, 2026'}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <Clock className="w-3.5 h-3.5 text-[#E67E22]" />
               <span>{event.startTime || event.time || event.demoTime || '10:00 AM'}</span>
             </div>
             <div className="sm:col-span-2 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-rose-400" />
+              <MapPin className="w-3.5 h-3.5 text-[#95A5A6]" />
               <span>{event.venue || 'R V R & J C Campus'}</span>
             </div>
           </div>
@@ -178,11 +178,11 @@ export default function DigitalPass({ pass }) {
 
         {/* Team Members List (if applicable) */}
         {teamMembersList.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-white/10">
-            <p className="text-xs font-semibold text-slate-400 mb-2">Registered Team Members ({teamMembersList.length}):</p>
+          <div className="mt-4 pt-3 border-t border-[#95A5A6]/20">
+            <p className="text-xs font-semibold text-[#95A5A6] mb-2">Registered Team Members ({teamMembersList.length}):</p>
             <div className="flex flex-wrap gap-1.5">
               {teamMembersList.map((member, idx) => (
-                <span key={idx} className="px-2 py-0.5 rounded-md text-[11px] bg-white/5 border border-white/10 text-slate-300">
+                <span key={idx} className="px-2 py-0.5 rounded-md text-[11px] bg-[#2C3E50] border border-[#95A5A6]/30 text-[#ECF0F1]">
                   {member}
                 </span>
               ))}
@@ -191,9 +191,9 @@ export default function DigitalPass({ pass }) {
         )}
 
         {/* Security Watermark Footer */}
-        <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
+        <div className="mt-6 pt-4 border-t border-[#95A5A6]/20 flex items-center justify-between text-[11px] text-[#95A5A6]">
           <span>STATUS: <strong className="text-emerald-400">{pass.status || 'CONFIRMED'}</strong></span>
-          <span>Security Code: <strong>{(pass.registrationId || '').replace('COL26-', '#')}</strong></span>
+          <span>Security Code: <strong className="text-[#ECF0F1]">{(pass.registrationId || '').replace('COL26-', '#')}</strong></span>
         </div>
       </div>
 
@@ -202,15 +202,15 @@ export default function DigitalPass({ pass }) {
         <button
           onClick={handlePrint}
           type="button"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-white/10 hover:bg-white/15 text-white border border-white/15 transition-all shadow-md"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-[#34495E] hover:bg-[#2C3E50] text-[#ECF0F1] border border-[#95A5A6]/30 transition-all shadow-md"
         >
-          <Printer className="w-4 h-4 text-brand-purple" />
+          <Printer className="w-4 h-4 text-[#2980B9]" />
           <span>Print / Save PDF</span>
         </button>
         <button
           onClick={handleShare}
           type="button"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-brand-purple/20 hover:bg-brand-purple/30 text-brand-purple border border-brand-purple/40 transition-all shadow-md"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-[#2980B9]/20 hover:bg-[#2980B9]/30 text-[#2980B9] border border-[#2980B9]/40 transition-all shadow-md"
         >
           <Share2 className="w-4 h-4" />
           <span>Share Pass</span>

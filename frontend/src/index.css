@@ -4,43 +4,43 @@
 
 @layer base {
   :root {
-    /* Dark Theme Default */
-    --bg-page: #0A0C10;
-    --bg-surface: #11151C;
-    --bg-elevated: #181D26;
-    --bg-highest: #1E2430;
-    --color-brand: #6D5AE6;
-    --color-brand-hover: #7B6AEF;
-    --color-secondary: #4D7CFE;
-    --color-accent: #9B8AFB;
-    --text-primary: #F5F7FA;
-    --text-secondary: #A9B1BF;
-    --text-muted: #737C8C;
-    --border-color: rgba(255, 255, 255, 0.08);
-    --border-subtle: rgba(255, 255, 255, 0.05);
-    --color-success: #35B779;
-    --color-warning: #E5A93D;
-    --color-error: #E05D65;
+    /* Palette Tokens: #2C3E50, #2980B9, #E67E22, #ECF0F1, #95A5A6 */
+    --bg-page: #1A252F;
+    --bg-surface: #2C3E50;
+    --bg-elevated: #34495E;
+    --bg-highest: #3E5871;
+    --color-brand: #2980B9;
+    --color-brand-hover: #3498DB;
+    --color-secondary: #2980B9;
+    --color-accent: #E67E22;
+    --text-primary: #ECF0F1;
+    --text-secondary: #BDC3C7;
+    --text-muted: #95A5A6;
+    --border-color: rgba(149, 165, 166, 0.25);
+    --border-subtle: rgba(149, 165, 166, 0.15);
+    --color-success: #27AE60;
+    --color-warning: #E67E22;
+    --color-error: #E74C3C;
   }
 
   .light {
-    /* Light Theme */
-    --bg-page: #F6F7FA;
+    /* Light Theme using Palette */
+    --bg-page: #ECF0F1;
     --bg-surface: #FFFFFF;
     --bg-elevated: #FFFFFF;
-    --bg-highest: #F0F2F6;
-    --color-brand: #5546C7;
-    --color-brand-hover: #493BB5;
-    --color-secondary: #356AE6;
-    --color-accent: #7567D8;
-    --text-primary: #171A21;
-    --text-secondary: #5F6878;
-    --text-muted: #858D9B;
-    --border-color: #E1E4EA;
-    --border-subtle: #ECEEF2;
-    --color-success: #218A5A;
-    --color-warning: #A87516;
-    --color-error: #C74752;
+    --bg-highest: #F4F6F7;
+    --color-brand: #2980B9;
+    --color-brand-hover: #1F618D;
+    --color-secondary: #2980B9;
+    --color-accent: #E67E22;
+    --text-primary: #2C3E50;
+    --text-secondary: #34495E;
+    --text-muted: #7F8C8D;
+    --border-color: rgba(149, 165, 166, 0.4);
+    --border-subtle: rgba(149, 165, 166, 0.2);
+    --color-success: #27AE60;
+    --color-warning: #E67E22;
+    --color-error: #E74C3C;
   }
 
   body {
@@ -53,7 +53,7 @@
   }
 }
 
-/* Glass & Surface styles */
+/* Glass & Surface styles with #2C3E50 & #95A5A6 */
 .glass-surface {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -62,15 +62,15 @@
 }
 
 .glass-navbar {
-  background-color: rgba(10, 12, 16, 0.85);
-  border-bottom: 1px solid var(--border-color);
+  background-color: rgba(44, 62, 80, 0.94); /* #2C3E50 at 94% */
+  border-bottom: 1px solid rgba(149, 165, 166, 0.25);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
 .light .glass-navbar {
-  background-color: rgba(255, 255, 255, 0.88);
-  border-bottom: 1px solid var(--border-color);
+  background-color: rgba(236, 240, 241, 0.95); /* #ECF0F1 at 95% */
+  border-bottom: 1px solid rgba(149, 165, 166, 0.35);
 }
 
 /* Interactive Card with Cursor Edge Tracking */

@@ -6,7 +6,7 @@ export default function EasterEggCelebration({ show }) {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
-      <div className="p-6 rounded-3xl bg-dark-900/90 border border-brand-purple/50 backdrop-blur-xl shadow-2xl text-center animate-bounce-soft">
+      <div className="p-6 rounded-3xl bg-dark-surface/90 border border-brand-purple/50 backdrop-blur-xl shadow-2xl text-center animate-bounce-soft">
         <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-brand-purple/20 flex items-center justify-center text-brand-purple">
           <Trophy className="w-8 h-8 text-amber-400" />
         </div>
