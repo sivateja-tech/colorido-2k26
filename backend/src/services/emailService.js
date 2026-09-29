@@ -260,8 +260,103 @@ async function sendVerificationEmail({ to, verificationUrl, name = 'Participant'
   }
 }
 
+/**
+ * Send official reply email to visitor / participant contact message
+ */
+async function sendContactReplyEmail({ to, recipientName, subject, replyText, originalSubject, originalMessage }) {
+  try {
+    const transport = getTransporter();
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject || 'COLORIDO 2K26 Helpdesk Response'}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #1A252F; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #ECF0F1;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #1A252F; padding: 36px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 580px; background-color: #2C3E50; border-radius: 20px; border: 1px solid rgba(149, 165, 166, 0.25); box-shadow: 0 20px 40px rgba(0,0,0,0.5); overflow: hidden;">
+          <tr>
+            <td style="padding: 28px 32px; background: linear-gradient(135deg, #2980B9 0%, #1F618D 100%); text-align: left;">
+              <span style="font-size: 11px; font-weight: 800; letter-spacing: 2px; color: #ECF0F1; text-transform: uppercase;">Official Helpdesk Response</span>
+              <h1 style="margin: 6px 0 0 0; font-size: 22px; font-weight: 800; color: #ffffff;">COLORIDO 2K26</h1>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: rgba(236, 240, 241, 0.85);">R V R &amp; J C College of Engineering, Guntur</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px;">
+              <p style="margin: 0 0 16px 0; font-size: 14px; color: #ECF0F1;">
+                Hello <strong style="color: #3498DB;">${recipientName}</strong>,
+              </p>
+              <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #BDC3C7;">
+                Thank you for contacting the COLORIDO 2K26 coordination team regarding: <em style="color: #ECF0F1;">"${originalSubject || 'Your inquiry'}"</em>.
+              </p>
+              
+              <div style="background-color: #1A252F; border-left: 4px solid #2980B9; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #2980B9;">
+                  Response from Organizing Committee:
+                </p>
+                <div style="font-size: 14px; line-height: 1.7; color: #ECF0F1; white-space: pre-wrap;">
+${replyText}
+                </div>
+              </div>
+
+              ${originalMessage ? `
+              <div style="background-color: rgba(0,0,0,0.18); border: 1px solid rgba(149, 165, 166, 0.15); border-radius: 10px; padding: 16px; margin: 24px 0 16px 0;">
+                <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 700; color: #95A5A6;">
+                  Your Original Message:
+                </p>
+                <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #95A5A6; font-style: italic;">
+                  ${originalMessage}
+                </p>
+              </div>
+              ` : ''}
+
+              <p style="margin: 24px 0 0 0; font-size: 13px; line-height: 1.6; color: #BDC3C7;">
+                If you have any further questions, feel free to reply directly to this email or visit our campus helpdesk.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 32px; text-align: center; border-top: 1px solid rgba(149, 165, 166, 0.15); background-color: #1A252F;">
+              <p style="margin: 0; font-size: 11px; color: #95A5A6;">
+                &copy; 2026 COLORIDO 2K26 &bull; National Level Youth Festival &bull; RVR&amp;JC CE
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    const mailOptions = {
+      from: config.SMTP.FROM,
+      to,
+      subject: subject || `Re: ${originalSubject} — COLORIDO 2K26 Helpdesk`,
+      text: `Hello ${recipientName},\n\nThank you for reaching out regarding "${originalSubject}".\n\nResponse:\n${replyText}\n\nOriginal Message:\n${originalMessage}\n\nCOLORIDO 2K26 Organizing Committee`,
+      html: htmlContent
+    };
+
+    const info = await transport.sendMail(mailOptions);
+    console.log(`[EMAIL] Official contact reply sent to ${to}: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`[EMAIL ERROR] Failed to send contact reply to ${to}:`, error.message);
+    return { success: false, error: error.message };
+  }
+}
+
 module.exports = {
   sendPasswordResetEmail,
   sendVerificationEmail,
+  sendContactReplyEmail,
   getTransporter
 };
+

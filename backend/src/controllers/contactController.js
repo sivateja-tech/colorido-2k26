@@ -1,4 +1,5 @@
 const prisma = require('../services/prisma');
+const { sendContactReplyEmail } = require('../services/emailService');
 
 /**
  * Public: Submit contact message
@@ -119,6 +120,53 @@ async function updateContactStatus(req, res, next) {
 }
 
 /**
+ * Admin: Reply directly to contact inquiry via email and resolve
+ */
+async function replyContactMessage(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { replyText, subject } = req.body;
+
+    if (!replyText || !replyText.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reply message text is required.'
+      });
+    }
+
+    const contact = await prisma.contactMessage.findUnique({ where: { id } });
+    if (!contact) {
+      return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    // Send formatted email to user
+    const emailResult = await sendContactReplyEmail({
+      to: contact.email,
+      recipientName: contact.name,
+      subject: subject ? subject.trim() : `Re: ${contact.subject} — COLORIDO 2K26 Helpdesk`,
+      replyText: replyText.trim(),
+      originalSubject: contact.subject,
+      originalMessage: contact.message
+    });
+
+    // Update status to RESOLVED
+    const updated = await prisma.contactMessage.update({
+      where: { id },
+      data: { status: 'RESOLVED' }
+    });
+
+    res.json({
+      success: true,
+      message: `Official reply sent successfully to ${contact.email} and marked as RESOLVED.`,
+      data: updated,
+      emailSent: emailResult.success
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * Admin: Delete contact message
  */
 async function deleteContactMessage(req, res, next) {
@@ -140,5 +188,7 @@ module.exports = {
   submitContact,
   getContactMessages,
   updateContactStatus,
+  replyContactMessage,
   deleteContactMessage
 };
+
