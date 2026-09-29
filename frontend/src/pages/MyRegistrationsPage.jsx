@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Ticket, Calendar, MapPin, ExternalLink, AlertCircle, Sparkles, RefreshCw } from 'lucide-react';
+import { Ticket, Calendar, MapPin, ExternalLink, AlertCircle, Sparkles, RefreshCw, LogIn } from 'lucide-react';
 import { fetchMyRegistrations } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getStatusBadge, getCategoryBadge } from '../utils/helpers';
-import GoogleAuthModal from '../components/GoogleAuthModal';
 
 export default function MyRegistrationsPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -13,7 +12,6 @@ export default function MyRegistrationsPage() {
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const loadRegistrations = async () => {
     if (!isAuthenticated) {
@@ -56,22 +54,16 @@ export default function MyRegistrationsPage() {
             My Registrations
           </h1>
           <p className="text-xs sm:text-sm text-dark-text-secondary max-w-md mx-auto">
-            Please sign in with your Google account to view your confirmed registrations, event passes, and entry QR codes.
+            Please sign in to your account to view your confirmed registrations, festival passes, and entry QR codes.
           </p>
         </div>
-        <button
-          onClick={() => setAuthModalOpen(true)}
+        <Link
+          to="/auth"
           className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover shadow-md transition-all"
         >
-          <Sparkles className="w-4 h-4" />
-          <span>Sign in with Google</span>
-        </button>
-
-        <GoogleAuthModal
-          isOpen={authModalOpen}
-          onClose={() => setAuthModalOpen(false)}
-          onSuccess={() => loadRegistrations()}
-        />
+          <LogIn className="w-4 h-4" />
+          <span>Sign In to Your Account</span>
+        </Link>
       </div>
     );
   }

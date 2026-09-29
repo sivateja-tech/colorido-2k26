@@ -8,7 +8,6 @@ import { fetchEventById, fetchMyRegistrations } from '../services/api';
 import EventVisualCanvas from '../components/EventVisualCanvas';
 import { useAuth } from '../context/AuthContext';
 import { getCategoryBadge } from '../utils/helpers';
-import GoogleAuthModal from '../components/GoogleAuthModal';
 
 export default function EventDetailsPage() {
   const { id } = useParams();
@@ -19,7 +18,6 @@ export default function EventDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userRegistration, setUserRegistration] = useState(null);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -326,23 +324,18 @@ export default function EventDetailsPage() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               ) : (
-                <button
-                  onClick={() => setAuthModalOpen(true)}
+                <Link
+                  to={`/auth?redirect=/events/${event.id}`}
                   className="w-full py-3 rounded-xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.02]"
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>Sign in to Register</span>
-                </button>
+                </Link>
               )}
             </div>
           </div>
         </div>
       </div>
-
-      <GoogleAuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-      />
     </div>
   );
 }

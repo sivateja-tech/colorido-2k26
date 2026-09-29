@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, Shield, LogOut, User, Ticket, Sparkles, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -90,8 +89,6 @@ export default function Navbar() {
 
             {/* Right Action Controls */}
             <div className="hidden lg:flex items-center gap-3">
-              <ThemeToggle />
-
               {/* Admin Link if Admin */}
               {isAdmin && (
                 <Link
@@ -166,7 +163,6 @@ export default function Navbar() {
 
             {/* Mobile Controls */}
             <div className="flex items-center gap-2 lg:hidden">
-              <ThemeToggle />
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="p-2 rounded-xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border text-dark-text dark:text-dark-text light:text-light-text"

@@ -96,9 +96,27 @@ export default function PassPage() {
         </div>
       )}
 
+      {/* Live Verification Banner when pass is found */}
+      {pass && (
+        <div className="max-w-xl mx-auto p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-emerald-400">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-emerald-300">Official Entry Pass Verified</p>
+              <p className="text-xs text-emerald-400/80">Valid registration for COLORIDO 2K26 • Status: {pass.status || 'CONFIRMED'}</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shrink-0">
+            AUTHENTIC
+          </span>
+        </div>
+      )}
+
       {/* Digital Pass Display */}
       {pass && (
-        <div className="pt-4">
+        <div className="pt-2">
           <DigitalPass pass={pass} />
         </div>
       )}

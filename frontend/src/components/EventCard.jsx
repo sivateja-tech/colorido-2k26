@@ -105,32 +105,13 @@ export default function EventCard({ event }) {
             <span className="truncate">{event.venue}</span>
           </div>
 
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-dark-muted dark:text-dark-muted light:text-slate-400" />
-              <span>
-                {event.participantType === 'TEAM'
-                  ? `Team (${event.minTeamSize || 2}-${event.maxTeamSize || 4} members)`
-                  : 'Individual / Solo'}
-              </span>
-            </div>
-            <span className="font-mono text-[11px] font-bold text-brand-purple dark:text-brand-accent light:text-brand-light-primary">
-              {registeredCount} / {capacity} Slots
+          <div className="flex items-center gap-1.5 pt-1 text-slate-400">
+            <Users className="w-3.5 h-3.5 text-brand-purple shrink-0" />
+            <span>
+              {event.participantType === 'TEAM'
+                ? `Team Event (${event.minTeamSize || 2}-${event.maxTeamSize || 4} members)`
+                : 'Individual / Solo Competition'}
             </span>
-          </div>
-
-          {/* Capacity Progress Bar */}
-          <div className="w-full bg-dark-elevated dark:bg-dark-elevated light:bg-slate-100 h-2 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                percentFilled >= 100
-                  ? 'bg-brand-error'
-                  : percentFilled > 80
-                  ? 'bg-brand-warning'
-                  : 'bg-gradient-to-r from-brand-purple to-brand-secondary'
-              }`}
-              style={{ width: `${percentFilled}%` }}
-            />
           </div>
         </div>
 

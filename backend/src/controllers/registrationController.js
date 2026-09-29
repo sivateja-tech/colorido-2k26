@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const prisma = require('../services/prisma');
+const config = require('../config');
 
 function generateRegistrationId() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -93,21 +94,9 @@ async function createRegistration(req, res, next) {
           registrationId = generateRegistrationId();
         }
 
-        // QR data payload
-        const qrPayload = JSON.stringify({
-          brand: 'COLORIDO 2K26',
-          college: 'R V R & J C College of Engineering',
-          regId: registrationId,
-          event: event.title,
-          category: event.category,
-          participant: fullName.trim(),
-          email: normalizedEmail,
-          collegeName: college.trim(),
-          team: teamName ? teamName.trim() : 'Solo',
-          date: event.date,
-          time: event.startTime,
-          venue: event.venue
-        });
+        // QR data payload: direct scannable verification URL
+        const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
+        const qrPayload = `${frontendUrl}/verify/${registrationId}`;
 
         const newReg = await tx.registration.create({
           data: {
