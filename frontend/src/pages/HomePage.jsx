@@ -168,7 +168,7 @@ export default function HomePage() {
             Three Grand Categories
           </h2>
           <p className="text-sm sm:text-base text-[#95A5A6] max-w-2xl mx-auto">
-            Compete, perform, and build with 29 database-driven events backed by official faculty convenors and collegiate referees.
+            Compete, perform, and build across Sports, Cultural, and Technical events, each designed with its own challenges, experiences, and competition formats.
           </p>
         </div>
 

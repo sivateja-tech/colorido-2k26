@@ -39,7 +39,7 @@ export default function AdminDashboardPage() {
     fullDescription: '',
     rules: '',
     eligibility: '',
-    demoDate: 'Day 1 (March 28, 2026)',
+    demoDate: 'Day 1 (October 15, 2026)',
     demoTime: '10:00 AM - 02:00 PM',
     venue: 'College Sports Pavilion',
     prizePool: '₹25,000',

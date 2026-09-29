@@ -125,7 +125,7 @@ export default function EventCard({ event }) {
         <div className="space-y-2 text-xs text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-600 border-t border-[#95A5A6]/20 dark:border-[#95A5A6]/15 light:border-slate-200 pt-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-3.5 h-3.5 text-[#2980B9] shrink-0" />
-            <span className="truncate font-medium">{event.date || 'March 28, 2026'}</span>
+            <span className="truncate font-medium">{event.date || 'October 16, 2026'}</span>
             <span className="text-[#95A5A6]">•</span>
             <Clock className="w-3.5 h-3.5 text-[#2980B9] shrink-0" />
             <span className="truncate font-medium">{event.startTime || '10:00 AM'}</span>

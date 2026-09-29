@@ -25,7 +25,7 @@ const ROUNDS_BY_CATEGORY = {
       roundNumber: 1,
       title: 'Round 1 – Knockout Qualifiers',
       description: 'Single-elimination knockout matches conducted simultaneously across division grounds.',
-      date: 'February 20, 2026',
+      date: 'October 15, 2026',
       time: '08:30 AM - 01:00 PM',
       duration: '45-90 Mins per match',
       qualificationCriteria: 'Winner of each knockout tie directly advances to Quarter-Finals. Official association referees officiate.'
@@ -34,7 +34,7 @@ const ROUNDS_BY_CATEGORY = {
       roundNumber: 2,
       title: 'Round 2 – Quarter & Semi-Finals',
       description: 'Top advancing collegiate teams battle in high-intensity semi-final fixtures.',
-      date: 'February 21, 2026',
+      date: 'October 16, 2026',
       time: '09:00 AM - 03:00 PM',
       duration: 'Full-length match duration',
       qualificationCriteria: 'Winners advance to Grand Championship Finals. Losers contest 3rd place bronze playoff.'
@@ -43,7 +43,7 @@ const ROUNDS_BY_CATEGORY = {
       roundNumber: 3,
       title: 'Round 3 – Grand Championship Finals',
       description: 'Floodlit grand finale with stadium commentary, collegiate broadcast, and trophy ceremony.',
-      date: 'February 22, 2026',
+      date: 'October 17, 2026',
       time: '04:00 PM - 07:30 PM',
       duration: 'Full championship match',
       qualificationCriteria: 'Gold Medal and Champions Rolling Trophy awarded to the victor; Runner-up receives Silver.'
@@ -54,7 +54,7 @@ const ROUNDS_BY_CATEGORY = {
       roundNumber: 1,
       title: 'Round 1 – Screening Prelims',
       description: 'Short preliminary performance showcase evaluated on technical precision, rhythm, and stage etiquette.',
-      date: 'February 20, 2026',
+      date: 'October 15, 2026',
       time: '10:00 AM - 02:00 PM',
       duration: '3 to 5 Minutes per participant/team',
       qualificationCriteria: 'Top 8 highest scoring entries across technical criteria qualify for Stage Mains.'
@@ -63,7 +63,7 @@ const ROUNDS_BY_CATEGORY = {
       roundNumber: 2,
       title: 'Round 2 – Grand Amphitheatre Finals',
       description: 'Full-scale stage showcase under professional lighting, sound system, and live audience of 5,000+ students.',
-      date: 'February 22, 2026',
+      date: 'October 17, 2026',
       time: '05:30 PM - 09:30 PM',
       duration: '8 to 12 Minutes per team',
       qualificationCriteria: 'Judged on choreography/composition, audience impact, costumes, innovation, and adherence to time limits.'
@@ -74,7 +74,7 @@ const ROUNDS_BY_CATEGORY = {
       roundNumber: 1,
       title: 'Round 1 – Ideation & Screening Assessment',
       description: 'Problem statement selection, rapid architectural pitch, and core algorithmic foundation review.',
-      date: 'February 20, 2026',
+      date: 'October 15, 2026',
       time: '09:30 AM - 12:30 PM',
       duration: '3 Hours',
       qualificationCriteria: 'Viability of solution, technical complexity, and architectural feasibility scored out of 100.'
@@ -83,7 +83,7 @@ const ROUNDS_BY_CATEGORY = {
       roundNumber: 2,
       title: 'Round 2 – Sprint Build & Checkpoint Review',
       description: 'Intense development sprint in high-performance labs with mentor evaluation and technical milestone reviews.',
-      date: 'February 21, 2026',
+      date: 'October 16, 2026',
       time: '01:00 PM - 07:00 PM',
       duration: '6 Hours',
       qualificationCriteria: 'Working code repository, test cases, and database integration verified by technical jury.'
@@ -92,7 +92,7 @@ const ROUNDS_BY_CATEGORY = {
       roundNumber: 3,
       title: 'Round 3 – Grand Jury Pitch & Live Demonstration',
       description: 'Live product demo before industry executives, venture evaluators, and department heads.',
-      date: 'February 22, 2026',
+      date: 'October 17, 2026',
       time: '11:00 AM - 02:30 PM',
       duration: '10 Mins Pitch + 5 Mins Q&A',
       qualificationCriteria: 'Final score calculated from codebase quality (40%), innovation (30%), and live demonstration (30%).'
@@ -217,7 +217,7 @@ async function seedRoundsAndOrganizers() {
       ? '• College sports uniform / kit with visible chest numbers\n• Non-marking turf / rubber studs as per ground specification\n• Personal safety gear (guards, gloves, helmets where mandatory)\n• College bonafide eligibility certificate endorsed by Physical Director'
       : '• Official college ID card & festival confirmation ticket\n• High-resolution background music track on USB pen drive\n• Stage props and costumes (must be inspected by stage crew 1 hr before)\n• Live instrumentalists must register acoustic setup beforehand';
 
-    const importantDates = `• Online Registration Closes: February 18, 2026 (11:59 PM)\n• Spot Registration & Desk Verification: February 20, 2026 (08:00 AM)\n• Tournament Schedule Release: February 19, 2026\n• Grand Prize Distribution & Valedictory: February 22, 2026 (06:00 PM)`;
+    const importantDates = `• Online Registration Closes: October 13, 2026 (11:59 PM)\n• Spot Registration & Desk Verification: October 15, 2026 (08:00 AM)\n• Tournament Schedule Release: October 14, 2026\n• Grand Prize Distribution & Valedictory: October 17, 2026 (06:00 PM)`;
 
     await prisma.event.update({
       where: { id: event.id },

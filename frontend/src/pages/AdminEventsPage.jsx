@@ -44,8 +44,8 @@ export default function AdminEventsPage() {
     rules: '',
     eligibility: 'Open to all registered undergraduate & postgraduate students with valid college ID.',
     requirements: 'Valid College ID Card\nProper event attire/equipment\nRegistration Confirmation Pass',
-    importantDates: 'Registration Closes: March 26, 2026\nEvent Orientation: March 27, 2026',
-    date: 'March 28, 2026',
+    importantDates: 'Registration Closes: October 13, 2026\nEvent Orientation: October 15, 2026',
+    date: 'October 15, 2026',
     startTime: '10:00 AM',
     endTime: '01:00 PM',
     venue: 'College Sports Complex / Main Ground',
@@ -65,7 +65,7 @@ export default function AdminEventsPage() {
         roundNumber: 1,
         title: 'Round 1 – Prelims',
         description: 'Initial qualifier round to evaluate baseline performance.',
-        date: 'March 28, 2026',
+        date: 'October 15, 2026',
         time: '10:00 AM - 11:30 AM',
         venue: 'Main Ground',
         duration: '90 Minutes',
@@ -129,7 +129,7 @@ export default function AdminEventsPage() {
       eligibility: event.eligibility || 'Open to all registered undergraduate & postgraduate students.',
       requirements: event.requirements || '',
       importantDates: event.importantDates || '',
-      date: event.date || event.demoDate || 'March 28, 2026',
+      date: event.date || event.demoDate || 'October 15, 2026',
       startTime: event.startTime || '10:00 AM',
       endTime: event.endTime || '01:00 PM',
       venue: event.venue || '',
@@ -149,7 +149,7 @@ export default function AdminEventsPage() {
           roundNumber: 1,
           title: 'Round 1 – Prelims',
           description: 'Qualifier round for participants.',
-          date: event.date || 'March 28, 2026',
+          date: event.date || 'October 15, 2026',
           time: event.startTime ? `${event.startTime} - ${event.endTime}` : '10:00 AM - 12:00 PM',
           venue: event.venue || 'Main Venue',
           duration: '2 Hours',
@@ -250,7 +250,7 @@ export default function AdminEventsPage() {
           roundNumber: nextNum,
           title: `Round ${nextNum} – ${nextNum === 2 ? 'Mains' : nextNum === 3 ? 'Finals' : 'Stage ' + nextNum}`,
           description: '',
-          date: formData.date || 'March 28, 2026',
+          date: formData.date || 'October 15, 2026',
           time: '10:00 AM - 12:00 PM',
           venue: formData.venue || 'Campus Venue',
           duration: '2 Hours',
@@ -843,7 +843,7 @@ export default function AdminEventsPage() {
                         value={formData.date}
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl text-xs bg-dark-bg border border-dark-border text-dark-text focus:outline-none focus:border-palette-blue"
-                        placeholder="e.g. March 28, 2026"
+                        placeholder="e.g. October 15, 2026"
                       />
                     </div>
 
@@ -1042,7 +1042,7 @@ export default function AdminEventsPage() {
                             value={round.date}
                             onChange={(e) => updateRound(idx, 'date', e.target.value)}
                             className="w-full px-3 py-1.5 rounded-lg text-xs bg-dark-bg border border-dark-border text-dark-text"
-                            placeholder="e.g. March 28, 2026"
+                            placeholder="e.g. October 15, 2026"
                           />
                         </div>
 
@@ -1276,7 +1276,7 @@ export default function AdminEventsPage() {
                       value={formData.importantDates}
                       onChange={(e) => setFormData({ ...formData, importantDates: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl text-xs bg-dark-bg border border-dark-border text-dark-text focus:outline-none focus:border-palette-blue"
-                      placeholder="Registration Closes: March 26, 2026, 11:59 PM&#10;Rounds Schedule Announcement: March 27, 2026&#10;Gate Reporting: March 28, 2026, 08:30 AM"
+                      placeholder="Registration Closes: October 13, 2026, 11:59 PM&#10;Rounds Schedule Announcement: October 14, 2026&#10;Gate Reporting: October 15, 2026, 08:30 AM"
                     />
                   </div>
                 </div>

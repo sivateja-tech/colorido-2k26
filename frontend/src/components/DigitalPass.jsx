@@ -163,7 +163,7 @@ export default function DigitalPass({ pass }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#BDC3C7]">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-[#2980B9]" />
-              <span>{event.date || event.demoDate || 'March 20-22, 2026'}</span>
+              <span>{event.date || event.demoDate || 'October 15-17, 2026'}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-[#E67E22]" />

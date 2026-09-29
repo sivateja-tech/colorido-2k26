@@ -523,7 +523,7 @@ export default function EventDetailsPage() {
               </div>
               <div className="text-xs sm:text-sm text-[#ECF0F1]/90 leading-relaxed whitespace-pre-line bg-[#1a252f] p-5 rounded-2xl border border-[#95A5A6]/20">
                 {event.importantDates || (
-                  `• Online Registration Closes: February 18, 2026 (11:59 PM)\n• Spot Desk Verification: February 20, 2026 (08:00 AM)\n• Tournament Schedule Release: February 19, 2026\n• Grand Valedictory Ceremony: February 22, 2026`
+                  `• Online Registration Closes: October 13, 2026 (11:59 PM)\n• Spot Desk Verification: October 15, 2026 (08:00 AM)\n• Tournament Schedule Release: October 14, 2026\n• Grand Valedictory Ceremony: October 17, 2026 (06:00 PM)`
                 )}
               </div>
             </div>
