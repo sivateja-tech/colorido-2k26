@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Trophy, Mail, Calendar, Plus,
-  CheckCircle, Clock, Trash2, Search, RefreshCw, AlertCircle
+  CheckCircle, CheckCircle2, Clock, Trash2, Search, RefreshCw, AlertCircle,
+  ArrowRight, QrCode, Layers, ChevronRight
 } from 'lucide-react';
 import {
   fetchAdminDashboard,
@@ -13,6 +15,42 @@ import {
   deleteEvent
 } from '../services/api';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+
+function CircularProgress({ percentage = 0, size = 56, strokeWidth = 5, color = '#10B981', trackColor = 'rgba(255,255,255,0.08)' }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (Math.min(100, Math.max(0, percentage)) / 100) * circumference;
+
+  return (
+    <div className="relative inline-flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <svg className="transform -rotate-90" width={size} height={size}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={trackColor}
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          className="transition-all duration-700 ease-out"
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center font-black font-display text-[#ECF0F1] text-xs">
+        {percentage}%
+      </div>
+    </div>
+  );
+}
 
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState('overview'); // overview, registrations, events, messages
@@ -180,67 +218,135 @@ export default function AdminDashboardPage() {
         </button>
       </div>
 
-      {/* Metrics Row */}
+      {/* Metrics Row with Direct Navigation */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-dark-surface border border-dark-border space-y-1">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
-            <span>Total Events</span>
-            <Trophy className="w-4 h-4 text-brand-purple" />
+        {/* 1. TOTAL EVENTS -> /admin/events */}
+        <Link
+          to="/admin/events"
+          className="p-5 rounded-2xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 hover:border-[#2980B9] hover:bg-[#2C3E50] transition-all cursor-pointer group flex flex-col justify-between shadow-md"
+        >
+          <div className="flex items-center justify-between text-[#95A5A6] text-xs font-bold uppercase tracking-wider">
+            <span className="group-hover:text-[#ECF0F1] transition-colors">Total Events</span>
+            <div className="w-8 h-8 rounded-xl bg-[#2980B9]/15 border border-[#2980B9]/30 flex items-center justify-center text-[#2980B9] group-hover:scale-110 transition-transform">
+              <Trophy className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-3xl font-black font-display text-white">{metrics.totalEvents || 0}</div>
-          <p className="text-[11px] text-slate-400">
-            {metrics.sportsEvents || 0} Sports • {metrics.culturalEvents || 0} Cultural • {metrics.technicalEvents || 0} Technical
-          </p>
-        </div>
+          <div className="py-2">
+            <div className="text-3xl font-black font-display text-[#ECF0F1]">
+              {metrics.totalEvents || 0}
+            </div>
+            <p className="text-[11px] text-[#95A5A6] mt-1 font-medium">
+              {metrics.sportsEvents || 0} Sports • {metrics.culturalEvents || 0} Cultural • {metrics.technicalEvents || 0} Technical
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#2980B9] group-hover:text-[#3498DB] pt-2 border-t border-[#95A5A6]/20">
+            <span>Manage event catalog</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
 
-        <div className="p-5 rounded-2xl bg-dark-surface border border-dark-border space-y-1">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
-            <span>Total Registrations</span>
-            <Users className="w-4 h-4 text-brand-cyan" />
+        {/* 2. TOTAL REGISTRATIONS -> /admin/registrations */}
+        <Link
+          to="/admin/registrations"
+          className="p-5 rounded-2xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 hover:border-[#E67E22] hover:bg-[#2C3E50] transition-all cursor-pointer group flex flex-col justify-between shadow-md"
+        >
+          <div className="flex items-center justify-between text-[#95A5A6] text-xs font-bold uppercase tracking-wider">
+            <span className="group-hover:text-[#ECF0F1] transition-colors">Total Registrations</span>
+            <div className="w-8 h-8 rounded-xl bg-[#E67E22]/15 border border-[#E67E22]/30 flex items-center justify-center text-[#E67E22] group-hover:scale-110 transition-transform">
+              <Users className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-3xl font-black font-display text-white">{metrics.totalRegistrations || 0}</div>
-          <p className="text-[11px] text-emerald-400">
-            {metrics.confirmedRegistrations || 0} Confirmed Passes
-          </p>
-        </div>
+          <div className="py-2">
+            <div className="text-3xl font-black font-display text-[#ECF0F1]">
+              {metrics.totalRegistrations || 0}
+            </div>
+            <p className="text-[11px] text-emerald-400 mt-1 font-medium">
+              {(metrics.activePasses ?? metrics.confirmedRegistrations) || 0} Active Passes ({metrics.checkedInRegistrations || 0} Verified)
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#E67E22] group-hover:text-[#F39C12] pt-2 border-t border-[#95A5A6]/20">
+            <span>View passes &amp; roster</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
 
-        <div className="p-5 rounded-2xl bg-dark-surface border border-dark-border space-y-1">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
-            <span>Capacity Utilized</span>
-            <Calendar className="w-4 h-4 text-amber-400" />
+        {/* 3. GATE CHECK-IN RATE (Circular Progress Bar) -> /admin/registrations */}
+        <Link
+          to="/admin/registrations"
+          className="p-5 rounded-2xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 hover:border-emerald-500 hover:bg-[#2C3E50] transition-all cursor-pointer group flex flex-col justify-between shadow-md"
+        >
+          <div className="flex items-center justify-between text-[#95A5A6] text-xs font-bold uppercase tracking-wider">
+            <span className="group-hover:text-[#ECF0F1] transition-colors">Gate Check-In Rate</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+              <QrCode className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-3xl font-black font-display text-amber-400">{metrics.capacityPercent || 0}%</div>
-          <p className="text-[11px] text-slate-400">
-            Across {metrics.totalCapacity || 0} total festival capacity
-          </p>
-        </div>
+          <div className="flex items-center justify-between gap-3 py-1">
+            <div>
+              <div className="text-3xl font-black font-display text-[#ECF0F1]">
+                {metrics.checkInRate ?? 0}%
+              </div>
+              <p className="text-[11px] text-[#95A5A6] mt-1 font-medium">
+                {metrics.checkedInRegistrations || 0} of {metrics.totalRegistrations || 0} scanned
+              </p>
+            </div>
+            <CircularProgress
+              percentage={metrics.checkInRate ?? 0}
+              size={56}
+              strokeWidth={5}
+              color="#10B981"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 group-hover:text-emerald-300 pt-2 border-t border-[#95A5A6]/20">
+            <span>Open check-in scanner</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
 
-        <div className="p-5 rounded-2xl bg-dark-surface border border-dark-border space-y-1">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase">
-            <span>Inquiries</span>
-            <Mail className="w-4 h-4 text-rose-400" />
+        {/* 4. INQUIRIES & GRIEVANCES -> /admin/messages */}
+        <Link
+          to="/admin/messages"
+          className="p-5 rounded-2xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 hover:border-[#2980B9] hover:bg-[#2C3E50] transition-all cursor-pointer group flex flex-col justify-between shadow-md"
+        >
+          <div className="flex items-center justify-between text-[#95A5A6] text-xs font-bold uppercase tracking-wider">
+            <span className="group-hover:text-[#ECF0F1] transition-colors">Inquiries &amp; Doubts</span>
+            <div className="w-8 h-8 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform">
+              <Mail className="w-4 h-4" />
+            </div>
           </div>
-          <div className="text-3xl font-black font-display text-white">{metrics.unreadMessages || 0}</div>
-          <p className="text-[11px] text-rose-400">
-            Pending student inquiries
-          </p>
-        </div>
+          <div className="py-2">
+            <div className="text-3xl font-black font-display text-[#ECF0F1]">
+              {metrics.unreadMessages || 0}
+            </div>
+            <p className="text-[11px] text-rose-400 mt-1 font-medium">
+              {metrics.unreadMessages === 1 ? '1 Pending student message' : `${metrics.unreadMessages || 0} Pending student messages`}
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-rose-400 group-hover:text-rose-300 pt-2 border-t border-[#95A5A6]/20">
+            <span>Open helpdesk inbox</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-dark-border pb-3 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-[#95A5A6]/20 pb-3 overflow-x-auto">
         <button
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'overview' ? 'bg-brand-purple text-white shadow-md' : 'text-slate-400 hover:text-white'
+            activeTab === 'overview'
+              ? 'bg-[#2980B9] text-white shadow-md'
+              : 'text-[#95A5A6] hover:text-[#ECF0F1] hover:bg-[#2C3E50]/50'
           }`}
         >
-          Overview &amp; Slot Matrix
+          Overview &amp; Hub
         </button>
         <button
           onClick={() => setActiveTab('registrations')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'registrations' ? 'bg-brand-purple text-white shadow-md' : 'text-slate-400 hover:text-white'
+            activeTab === 'registrations'
+              ? 'bg-[#2980B9] text-white shadow-md'
+              : 'text-[#95A5A6] hover:text-[#ECF0F1] hover:bg-[#2C3E50]/50'
           }`}
         >
           Passes &amp; Registrations
@@ -248,7 +354,9 @@ export default function AdminDashboardPage() {
         <button
           onClick={() => setActiveTab('events')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'events' ? 'bg-brand-purple text-white shadow-md' : 'text-slate-400 hover:text-white'
+            activeTab === 'events'
+              ? 'bg-[#2980B9] text-white shadow-md'
+              : 'text-[#95A5A6] hover:text-[#ECF0F1] hover:bg-[#2C3E50]/50'
           }`}
         >
           Event Management
@@ -256,7 +364,9 @@ export default function AdminDashboardPage() {
         <button
           onClick={() => setActiveTab('messages')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'messages' ? 'bg-brand-purple text-white shadow-md' : 'text-slate-400 hover:text-white'
+            activeTab === 'messages'
+              ? 'bg-[#2980B9] text-white shadow-md'
+              : 'text-[#95A5A6] hover:text-[#ECF0F1] hover:bg-[#2C3E50]/50'
           }`}
         >
           Helpdesk Messages
@@ -265,49 +375,188 @@ export default function AdminDashboardPage() {
 
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Event Capacity Fill Stats */}
-          <div className="p-6 rounded-3xl bg-dark-surface border border-dark-border space-y-4">
-            <h3 className="text-lg font-bold text-white font-display">
-              Live Tournament Capacity Utilisation
-            </h3>
-            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
-              {dashboardData?.eventStats?.map((ev) => {
-                const percent = Math.min(100, Math.round((ev.registeredCount / ev.capacity) * 100));
-                return (
-                  <div key={ev.id} className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-white truncate max-w-[220px]">{ev.title}</span>
-                      <span className="font-mono text-brand-purple">{ev.registeredCount} / {ev.capacity} ({percent}%)</span>
-                    </div>
-                    <div className="w-full bg-dark-700 h-1.5 rounded-full overflow-hidden">
-                      <div className="h-full bg-brand-purple rounded-full" style={{ width: `${percent}%` }} />
-                    </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+          {/* Left Column: Festival Operations Hub & Quick Links */}
+          <div className="p-6 rounded-3xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 space-y-5 shadow-lg">
+            <div className="flex items-center justify-between border-b border-[#95A5A6]/20 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#2980B9]/15 border border-[#2980B9]/30 flex items-center justify-center text-[#2980B9]">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-[#ECF0F1] font-display">
+                    Festival Operations Hub
+                  </h3>
+                  <p className="text-[11px] text-[#95A5A6]">
+                    Administrative controls and direct portal links
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                System Active
+              </span>
+            </div>
+
+            {/* Quick Navigation Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Link
+                to="/admin/events"
+                className="p-3.5 rounded-2xl bg-[#1A252F]/70 border border-[#95A5A6]/20 hover:border-[#2980B9] hover:bg-[#1A252F] transition-all group flex items-start gap-3"
+              >
+                <div className="w-9 h-9 rounded-xl bg-[#2980B9]/15 border border-[#2980B9]/30 flex items-center justify-center text-[#2980B9] shrink-0 group-hover:scale-105 transition-transform">
+                  <Trophy className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-[#ECF0F1] group-hover:text-[#2980B9] flex items-center gap-1">
+                    <span>Events Catalog</span>
+                    <ChevronRight className="w-3 h-3 opacity-60 group-hover:translate-x-0.5 transition-transform" />
                   </div>
-                );
-              })}
+                  <p className="text-[10px] text-[#95A5A6] mt-0.5">
+                    29 Events, rounds &amp; coordinators
+                  </p>
+                </div>
+              </Link>
+
+              <Link
+                to="/admin/registrations"
+                className="p-3.5 rounded-2xl bg-[#1A252F]/70 border border-[#95A5A6]/20 hover:border-[#E67E22] hover:bg-[#1A252F] transition-all group flex items-start gap-3"
+              >
+                <div className="w-9 h-9 rounded-xl bg-[#E67E22]/15 border border-[#E67E22]/30 flex items-center justify-center text-[#E67E22] shrink-0 group-hover:scale-105 transition-transform">
+                  <QrCode className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-[#ECF0F1] group-hover:text-[#E67E22] flex items-center gap-1">
+                    <span>Gate Scanner</span>
+                    <ChevronRight className="w-3 h-3 opacity-60 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                  <p className="text-[10px] text-[#95A5A6] mt-0.5">
+                    QR accreditation &amp; pass check-in
+                  </p>
+                </div>
+              </Link>
+
+              <Link
+                to="/admin/schedule"
+                className="p-3.5 rounded-2xl bg-[#1A252F]/70 border border-[#95A5A6]/20 hover:border-[#2980B9] hover:bg-[#1A252F] transition-all group flex items-start gap-3"
+              >
+                <div className="w-9 h-9 rounded-xl bg-[#2980B9]/15 border border-[#2980B9]/30 flex items-center justify-center text-[#2980B9] shrink-0 group-hover:scale-105 transition-transform">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-[#ECF0F1] group-hover:text-[#2980B9] flex items-center gap-1">
+                    <span>Timeline Matrix</span>
+                    <ChevronRight className="w-3 h-3 opacity-60 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                  <p className="text-[10px] text-[#95A5A6] mt-0.5">
+                    Oct 15 - 17, 2026 program slots
+                  </p>
+                </div>
+              </Link>
+
+              <Link
+                to="/admin/messages"
+                className="p-3.5 rounded-2xl bg-[#1A252F]/70 border border-[#95A5A6]/20 hover:border-rose-500 hover:bg-[#1A252F] transition-all group flex items-start gap-3"
+              >
+                <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0 group-hover:scale-105 transition-transform">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-[#ECF0F1] group-hover:text-rose-400 flex items-center gap-1">
+                    <span>Helpdesk Inbox</span>
+                    <ChevronRight className="w-3 h-3 opacity-60 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                  <p className="text-[10px] text-[#95A5A6] mt-0.5">
+                    {metrics.unreadMessages || 0} Inquiries pending review
+                  </p>
+                </div>
+              </Link>
+            </div>
+
+            {/* Category Breakdown Bar */}
+            <div className="p-4 rounded-2xl bg-[#1A252F]/70 border border-[#95A5A6]/20 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-[#ECF0F1]">Festival Category Distribution</span>
+                <span className="text-[11px] text-[#95A5A6]">29 Total Events</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="p-2.5 rounded-xl bg-[#2980B9]/15 border border-[#2980B9]/30">
+                  <div className="text-lg font-black text-[#2980B9] font-display">{metrics.sportsEvents || 9}</div>
+                  <div className="text-[10px] uppercase font-bold text-[#ECF0F1]">Sports</div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-[#E67E22]/15 border border-[#E67E22]/30">
+                  <div className="text-lg font-black text-[#E67E22] font-display">{metrics.culturalEvents || 10}</div>
+                  <div className="text-[10px] uppercase font-bold text-[#ECF0F1]">Cultural</div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-[#3498DB]/15 border border-[#3498DB]/30">
+                  <div className="text-lg font-black text-[#3498DB] font-display">{metrics.technicalEvents || 10}</div>
+                  <div className="text-[10px] uppercase font-bold text-[#ECF0F1]">Technical</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Recent Registrations Feed */}
-          <div className="p-6 rounded-3xl bg-dark-surface border border-dark-border space-y-4">
-            <h3 className="text-lg font-bold text-white font-display">
-              Recent Pass Issuances
-            </h3>
-            <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
-              {dashboardData?.recentRegistrations?.map((reg) => (
-                <div key={reg.id} className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
-                  <div>
-                    <div className="font-bold text-white font-mono text-[11px] text-amber-400">{reg.registrationId}</div>
-                    <div className="font-medium text-slate-200">{reg.fullName}</div>
-                    <div className="text-[11px] text-slate-400">{reg.event?.title}</div>
+          {/* Right Column: Recent Pass Issuances Feed */}
+          <div className="p-6 rounded-3xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 space-y-4 shadow-lg flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-[#95A5A6]/20 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#E67E22]/15 border border-[#E67E22]/30 flex items-center justify-center text-[#E67E22]">
+                    <Users className="w-4 h-4" />
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    {reg.status}
-                  </span>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-[#ECF0F1] font-display">
+                      Recent Pass Issuances
+                    </h3>
+                    <p className="text-[11px] text-[#95A5A6]">
+                      Real-time registration feed and verification status
+                    </p>
+                  </div>
                 </div>
-              ))}
+                <Link
+                  to="/admin/registrations"
+                  className="text-[11px] font-bold text-[#2980B9] hover:text-[#3498DB] flex items-center gap-1"
+                >
+                  <span>View All</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+
+              <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+                {(!dashboardData?.recentRegistrations || dashboardData.recentRegistrations.length === 0) ? (
+                  <div className="p-8 text-center text-xs text-[#95A5A6] bg-[#1A252F]/70 rounded-2xl border border-[#95A5A6]/20">
+                    No registrations issued yet.
+                  </div>
+                ) : (
+                  dashboardData.recentRegistrations.map((reg) => (
+                    <div
+                      key={reg.id}
+                      className="p-3.5 rounded-2xl bg-[#1A252F]/70 border border-[#95A5A6]/20 flex items-center justify-between text-xs hover:border-[#2980B9]/40 transition-colors"
+                    >
+                      <div className="space-y-0.5 min-w-0 pr-2">
+                        <div className="font-bold font-mono text-[11px] text-[#E67E22]">{reg.registrationId}</div>
+                        <div className="font-semibold text-[#ECF0F1] truncate">{reg.fullName}</div>
+                        <div className="text-[11px] text-[#95A5A6] truncate">{reg.event?.title}</div>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${
+                        reg.status === 'CHECKED_IN' || reg.checkedIn
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-[#2980B9]/15 text-[#2980B9] border border-[#2980B9]/30'
+                      }`}>
+                        {reg.status}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
+
+            <Link
+              to="/admin/registrations"
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center bg-[#2980B9] hover:bg-[#2980B9]/90 text-white transition-all shadow-md flex items-center justify-center gap-1.5 mt-2"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              <span>Open Participant Roster &amp; Scanner</span>
+            </Link>
           </div>
         </div>
       )}

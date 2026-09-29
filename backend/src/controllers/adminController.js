@@ -20,6 +20,7 @@ async function getDashboardStats(req, res, next) {
       totalRegistrations,
       todayRegistrations,
       confirmedRegistrations,
+      checkedInRegistrations,
       pendingRegistrations,
       cancelledRegistrations,
       upcomingEvents,
@@ -35,6 +36,7 @@ async function getDashboardStats(req, res, next) {
       prisma.registration.count(),
       prisma.registration.count({ where: { createdAt: { gte: todayStart } } }),
       prisma.registration.count({ where: { status: 'CONFIRMED' } }),
+      prisma.registration.count({ where: { OR: [{ checkedIn: true }, { status: 'CHECKED_IN' }] } }),
       prisma.registration.count({ where: { status: 'PENDING' } }),
       prisma.registration.count({ where: { status: 'CANCELLED' } }),
       prisma.event.count({ where: { published: true } }),
@@ -73,6 +75,8 @@ async function getDashboardStats(req, res, next) {
 
     const totalCapacity = eventsSummary.reduce((sum, e) => sum + (e.capacity || 0), 0);
     const capacityPercent = totalCapacity > 0 ? Math.round((totalRegistrations / totalCapacity) * 100) : 0;
+    const checkInRate = totalRegistrations > 0 ? Math.round((checkedInRegistrations / totalRegistrations) * 100) : 0;
+    const activePasses = confirmedRegistrations + checkedInRegistrations;
 
     res.json({
       success: true,
@@ -85,6 +89,9 @@ async function getDashboardStats(req, res, next) {
           totalRegistrations,
           todayRegistrations,
           confirmedRegistrations,
+          checkedInRegistrations,
+          activePasses,
+          checkInRate,
           pendingRegistrations,
           cancelledRegistrations,
           upcomingEvents,
@@ -93,6 +100,7 @@ async function getDashboardStats(req, res, next) {
           capacityPercent
         },
         topEvents: eventsSummary,
+        eventStats: eventsSummary,
         recentRegistrations
       }
     });
