@@ -73,30 +73,34 @@
   border-bottom: 1px solid rgba(149, 165, 166, 0.35);
 }
 
-/* Interactive Card with Cursor Edge Tracking & Depth */
+/* Interactive Card with Cursor Edge Tracking, 3D Perspective & Depth */
 .card-cursor-glow {
   position: relative;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
-}
-
-.card-cursor-glow:hover {
-  transform: translateY(-6px);
+  transform: perspective(1100px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(var(--card-lift, 0px));
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
 /* Subtle, performant ambient animations for competition event scenes */
 @keyframes ambientGlowPulse {
   0%, 100% { opacity: 0.35; transform: scale(1); }
-  50% { opacity: 0.65; transform: scale(1.04); }
+  50% { opacity: 0.75; transform: scale(1.06); }
 }
 
 @keyframes subtleFloat {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes subtleFloatSlow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(1.5deg); }
 }
 
 @keyframes subtleSway {
   0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(2deg); }
+  50% { transform: rotate(3deg); }
 }
 
 @keyframes scanlinePulse {
@@ -106,8 +110,18 @@
 }
 
 @keyframes audioBarPulse {
-  0%, 100% { transform: scaleY(0.3); }
+  0%, 100% { transform: scaleY(0.35); }
   50% { transform: scaleY(1); }
+}
+
+@keyframes shimmerSweep {
+  0% { transform: translateX(-100%) rotate(25deg); }
+  100% { transform: translateX(200%) rotate(25deg); }
+}
+
+@keyframes radarSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .animate-ambient-glow {
@@ -115,7 +129,11 @@
 }
 
 .animate-subtle-float {
-  animation: subtleFloat 3s ease-in-out infinite;
+  animation: subtleFloat 3.2s ease-in-out infinite;
+}
+
+.animate-subtle-float-slow {
+  animation: subtleFloatSlow 4.5s ease-in-out infinite;
 }
 
 .animate-subtle-sway {
@@ -125,6 +143,12 @@
 .animate-scanline {
   animation: scanlinePulse 3s linear infinite;
 }
+
+.animate-radar {
+  animation: radarSpin 8s linear infinite;
+  transform-origin: center;
+}
+
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {

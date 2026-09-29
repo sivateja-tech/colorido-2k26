@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Trophy, Users, ArrowRight, Eye, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Users, ArrowRight, Eye, Clock, ShieldCheck } from 'lucide-react';
 import EventVisualCanvas from './EventVisualCanvas';
 import { useCardGlow } from '../hooks/useCardGlow';
 import { getCategoryBadge } from '../utils/helpers';
@@ -8,12 +8,17 @@ import { getCategoryBadge } from '../utils/helpers';
 export default function EventCard({ event }) {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
-  const { cardRef, handleMouseMove } = useCardGlow();
+  const { cardRef, handleMouseMove, handleMouseLeave } = useCardGlow();
   const categoryBadge = getCategoryBadge(event.category);
 
   // IMPORTANT EVENT FLOW: Clicking card ALWAYS opens Event Details page first
   const handleCardClick = () => {
     navigate(`/events/${event.slug || event.id}`);
+  };
+
+  const onMouseLeaveCombined = () => {
+    setIsHovered(false);
+    handleMouseLeave();
   };
 
   return (
@@ -30,51 +35,76 @@ export default function EventCard({ event }) {
       }}
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="card-cursor-glow group relative flex flex-col rounded-3xl cursor-pointer select-none bg-dark-surface dark:bg-dark-surface light:bg-white border border-dark-border dark:border-dark-border light:border-slate-200 hover:border-palette-blue/80 dark:hover:border-palette-blue/80 light:hover:border-palette-blue/80 shadow-lg hover:shadow-2xl light:shadow-sm light:hover:shadow-xl hover:-translate-y-2 active:scale-[0.98] overflow-hidden transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-palette-blue"
+      onMouseLeave={onMouseLeaveCombined}
+      className="card-cursor-glow group relative flex flex-col rounded-3xl cursor-pointer select-none bg-dark-surface dark:bg-dark-surface light:bg-white border border-[#95A5A6]/25 dark:border-[#95A5A6]/20 light:border-slate-200 hover:border-[#2980B9]/80 dark:hover:border-[#2980B9]/80 light:hover:border-[#2980B9]/80 shadow-lg hover:shadow-2xl light:shadow-sm light:hover:shadow-xl active:scale-[0.985] overflow-hidden transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-palette-blue"
       title={`Click to view tournament details for ${event.title}`}
       style={{
-        background: `radial-gradient(450px circle at var(--mouse-x, 150px) var(--mouse-y, 150px), rgba(41, 128, 185, 0.14), transparent 45%)`
+        background: `radial-gradient(550px circle at var(--mouse-x, 150px) var(--mouse-y, 150px), rgba(41, 128, 185, 0.16), transparent 50%)`
       }}
     >
-      {/* Visual Canvas Scene with Depth & Smooth Interaction */}
-      <div className="relative h-52 sm:h-60 w-full overflow-hidden bg-gradient-to-b from-[#1A252F] to-[#2C3E50] dark:from-[#1A252F] dark:to-[#2C3E50] light:from-[#ECF0F1] light:to-[#D5DBDB] border-b border-dark-border dark:border-dark-border light:border-slate-200">
-        {/* Ambient Top Light Beam */}
-        <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-palette-blue/15 to-transparent pointer-events-none z-10 transition-opacity duration-300 group-hover:opacity-100 opacity-60" />
+      {/* Top Radiant Edge Sheen Highlight */}
+      <div className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#2980B9]/70 to-transparent pointer-events-none z-20 group-hover:via-[#3498DB] transition-all duration-300" />
 
-        <div className="w-full h-full transform transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+      {/* Visual Canvas Scene with Depth & Smooth Interaction */}
+      <div className="relative h-56 sm:h-64 w-full overflow-hidden bg-gradient-to-b from-[#151D24] via-[#1F2C38] to-[#2C3E50] dark:from-[#151D24] dark:via-[#1F2C38] dark:to-[#2C3E50] light:from-[#ECF0F1] light:via-[#E2E8F0] light:to-[#CBD5E1] border-b border-[#95A5A6]/20 dark:border-[#95A5A6]/15 light:border-slate-200">
+        
+        {/* Ambient Top Light Beam */}
+        <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-[#2980B9]/20 to-transparent pointer-events-none z-10 transition-opacity duration-300 group-hover:opacity-100 opacity-60" />
+
+        {/* Shimmer Light Ray on Hover */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none overflow-hidden z-10">
+          <div className="w-[200%] h-full bg-gradient-to-r from-transparent via-white/10 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+        </div>
+
+        {/* Canvas Render with Smooth Zoom */}
+        <div className="w-full h-full transform transition-transform duration-500 ease-out group-hover:scale-[1.04]">
           <EventVisualCanvas
             visualType={event.visualType || event.type || event.slug}
             isHovered={isHovered}
           />
         </div>
 
-        {/* Category & Featured Badges */}
-        <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md border shadow-sm ${categoryBadge.bg}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${categoryBadge.dot}`} />
+        {/* Bottom Vignette Blur Transition (eliminates harsh line into card body) */}
+        <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-dark-surface dark:from-dark-surface light:from-white via-dark-surface/40 dark:via-dark-surface/40 light:via-white/40 to-transparent pointer-events-none z-10" />
+
+        {/* Top Badges: Category & Featured */}
+        <div className="absolute top-3.5 left-3.5 flex items-center gap-2 z-20">
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md border shadow-md ${categoryBadge.bg}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${categoryBadge.dot} animate-pulse`} />
             {categoryBadge.label}
           </span>
           {event.featured && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-palette-orange/20 text-palette-orange border border-palette-orange/40 backdrop-blur-md shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-palette-orange animate-pulse" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-[#E67E22]/20 text-[#E67E22] border border-[#E67E22]/40 backdrop-blur-md shadow-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#E67E22] animate-ping" />
               Featured
             </span>
           )}
         </div>
 
-        {/* Prize Pool Tag */}
+        {/* Format Pill (Solo / Team) on Top Right */}
+        <div className="absolute top-3.5 right-3.5 z-20">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-dark-bg/85 dark:bg-dark-bg/85 light:bg-white/90 text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-700 border border-[#95A5A6]/25 dark:border-[#95A5A6]/25 light:border-slate-300 backdrop-blur-md shadow-sm">
+            <Users className="w-3 h-3 text-[#2980B9]" />
+            <span>
+              {event.participantType === 'TEAM'
+                ? `Team (${event.minTeamSize || 2}-${event.maxTeamSize || 4})`
+                : 'Solo'}
+            </span>
+          </span>
+        </div>
+
+        {/* Prize Pool Floating Badge */}
         {event.prizePool && (
-          <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-bg/90 dark:bg-dark-bg/90 light:bg-white/95 border border-palette-orange/35 text-palette-orange text-xs font-bold backdrop-blur-md shadow-md">
-            <Trophy className="w-3.5 h-3.5 text-palette-orange" />
+          <div className="absolute bottom-3 left-3.5 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-bg/95 dark:bg-dark-bg/95 light:bg-white/95 border border-[#E67E22]/40 text-[#E67E22] text-xs font-bold backdrop-blur-md shadow-lg">
+            <Trophy className="w-3.5 h-3.5 text-[#E67E22]" />
             <span>Prize: {event.prizePool}</span>
           </div>
         )}
 
-        {/* Hover Hint Overlay Pill */}
-        <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform translate-y-1 group-hover:translate-y-0">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-palette-blue text-white shadow-lg backdrop-blur-sm">
-            <Eye className="w-3 h-3" />
+        {/* Interactive Hover Hint Overlay Pill */}
+        <div className="absolute bottom-3 right-3.5 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none transform translate-y-1 group-hover:translate-y-0">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#2980B9] text-white shadow-lg backdrop-blur-sm border border-[#3498DB]/40">
+            <Eye className="w-3.5 h-3.5" />
             <span>Explore Event</span>
           </span>
         </div>
@@ -92,37 +122,33 @@ export default function EventCard({ event }) {
         </div>
 
         {/* Meta Info */}
-        <div className="space-y-2.5 text-xs text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-600 border-t border-dark-border dark:border-dark-border light:border-slate-200 pt-3">
+        <div className="space-y-2 text-xs text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-600 border-t border-[#95A5A6]/20 dark:border-[#95A5A6]/15 light:border-slate-200 pt-3">
           <div className="flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-palette-blue shrink-0" />
-            <span className="truncate font-medium">{event.date || 'March 28, 2026'} • {event.startTime || '10:00 AM'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5 text-palette-orange shrink-0" />
-            <span className="truncate">{event.venue}</span>
+            <Calendar className="w-3.5 h-3.5 text-[#2980B9] shrink-0" />
+            <span className="truncate font-medium">{event.date || 'March 28, 2026'}</span>
+            <span className="text-[#95A5A6]">•</span>
+            <Clock className="w-3.5 h-3.5 text-[#2980B9] shrink-0" />
+            <span className="truncate font-medium">{event.startTime || '10:00 AM'}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 pt-0.5 text-dark-muted">
-            <Users className="w-3.5 h-3.5 text-palette-blue shrink-0" />
-            <span className="font-medium">
-              {event.participantType === 'TEAM'
-                ? `Team Competition (${event.minTeamSize || 2}-${event.maxTeamSize || 4} members)`
-                : 'Individual / Solo Competition'}
-            </span>
+          <div className="flex items-center gap-2">
+            <MapPin className="w-3.5 h-3.5 text-[#E67E22] shrink-0" />
+            <span className="truncate">{event.venue || 'RVR & JC Campus'}</span>
           </div>
         </div>
 
         {/* Action Button: Opens Event Details Page First */}
-        <div className="pt-2">
+        <div className="pt-1">
           <button
             type="button"
-            className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-palette-blue hover:bg-palette-blue/90 shadow-md group-hover:shadow-palette-blue/25 flex items-center justify-center gap-2 transition-all duration-200"
+            className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#2980B9] to-[#2471A3] hover:from-[#3498DB] hover:to-[#2980B9] shadow-md group-hover:shadow-[0_4px_16px_rgba(41,128,185,0.35)] flex items-center justify-center gap-2 transition-all duration-200"
           >
             <span>View Event Details</span>
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-200" />
           </button>
         </div>
       </div>
     </div>
   );
 }
+
