@@ -10,7 +10,7 @@ export default function ThemeToggle({ className = '' }) {
       onClick={toggleTheme}
       type="button"
       aria-label="Toggle dark/light theme"
-      className={`relative p-2 rounded-xl transition-all duration-300 border border-white/10 hover:border-brand-purple/50 bg-dark-800/80 hover:bg-dark-700 text-slate-300 hover:text-white ${className}`}
+      className={`relative p-2 rounded-xl transition-all duration-300 border border-dark-border dark:border-dark-border light:border-slate-300 hover:border-brand-purple/50 bg-dark-surface dark:bg-dark-surface light:bg-slate-100 hover:bg-dark-elevated dark:hover:bg-dark-elevated light:hover:bg-slate-200 text-dark-text dark:text-dark-text light:text-slate-700 shadow-sm ${className}`}
     >
       {theme === 'dark' ? (
         <Sun className="w-4 h-4 text-amber-400 transition-transform hover:rotate-90 duration-300" />
