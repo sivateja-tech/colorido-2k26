@@ -29,14 +29,14 @@ export default function AdminLayout() {
     );
   }
 
-  // Strict client protection: redirect to login if not authenticated as admin
+  // Strict client protection: redirect to /auth if not authenticated as admin
   if (!admin) {
-    return <Navigate to="/admin/login" replace state={{ from: location }} />;
+    return <Navigate to="/auth" replace state={{ from: location }} />;
   }
 
   const handleLogout = () => {
     logoutAdmin();
-    navigate('/admin/login');
+    navigate('/auth');
   };
 
   const navItems = [

@@ -1,24 +1,33 @@
 const express = require('express');
 const router = express.Router();
 const {
-  googleAuth,
-  emailAuth,
-  adminLogin,
+  unifiedLogin,
+  registerUser,
+  forgotPassword,
+  verifyResetToken,
+  resetPassword,
+  changePassword,
   getMe,
-  getAdminMe
+  logout
 } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireAdmin } = require('../middleware/adminMiddleware');
 
-// Public auth endpoints
-router.post('/google', googleAuth);
-router.post('/email', emailAuth);
-router.post('/login', emailAuth);
-router.post('/register', emailAuth);
-router.post('/admin/login', adminLogin);
+// Unified Authentication Endpoints (Section: AUTHENTICATION — FINAL DESIGN)
+router.post('/login', unifiedLogin);
+router.post('/register', registerUser);
+router.post('/forgot-password', forgotPassword);
+router.get('/verify-reset-token', verifyResetToken);
+router.post('/reset-password', resetPassword);
+router.post('/change-password', requireAuth, changePassword);
+router.post('/logout', logout);
 
-// Protected profile endpoints
+// Profile Endpoints
 router.get('/me', requireAuth, getMe);
-router.get('/admin/me', requireAdmin, getAdminMe);
+router.get('/admin/me', requireAdmin, getMe);
+
+// Backward Compatibility Aliases
+router.post('/admin/login', unifiedLogin);
+router.post('/email', unifiedLogin);
 
 module.exports = router;

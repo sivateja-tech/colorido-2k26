@@ -1,9 +1,14 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './layouts/AdminLayout';
+
+// Unified Authentication Pages
+import AuthPage from './pages/AuthPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // Public Festival Pages
 import HomePage from './pages/HomePage';
@@ -24,7 +29,6 @@ import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Admin Portal Pages
-import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminEventsPage from './pages/AdminEventsPage';
 import AdminRegistrationsPage from './pages/AdminRegistrationsPage';
@@ -66,13 +70,19 @@ export default function App() {
         <Route path="pass/:id" element={<PassPage />} />
         <Route path="verify/:id" element={<PassPage />} />
 
+        {/* Authentication Routes */}
+        <Route path="auth" element={<AuthPage />} />
+        <Route path="login" element={<AuthPage />} />
+        <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="reset-password" element={<ResetPasswordPage />} />
+
         {/* Helpdesk & 404 */}
         <Route path="contact" element={<ContactPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       {/* Admin Portal Authentication & Routes */}
-      <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route path="/admin/login" element={<Navigate to="/auth" replace />} />
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboardPage />} />
         <Route path="dashboard" element={<AdminDashboardPage />} />

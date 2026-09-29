@@ -3,11 +3,9 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, Shield, LogOut, User, Ticket, Sparkles, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
-import GoogleAuthModal from './GoogleAuthModal';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { user, admin, isAdmin, isAuthenticated, logoutUser, logoutAdmin } = useAuth();
@@ -156,13 +154,13 @@ export default function Navbar() {
                   )}
                 </div>
               ) : (
-                <button
-                  onClick={() => setAuthModalOpen(true)}
+                <Link
+                  to="/auth"
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover dark:bg-brand-purple dark:hover:bg-brand-purple-hover light:bg-brand-light-primary light:hover:bg-brand-light-hover shadow-sm transition-all"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Sign In / Register</span>
-                </button>
+                </Link>
               )}
             </div>
 
@@ -245,27 +243,19 @@ export default function Navbar() {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    setAuthModalOpen(true);
-                  }}
+                <Link
+                  to="/auth"
+                  onClick={() => setMobileMenuOpen(false)}
                   className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-brand-purple flex items-center justify-center gap-2"
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>Sign In / Register</span>
-                </button>
+                </Link>
               )}
             </div>
           </div>
         )}
       </header>
-
-      {/* Google Auth Modal */}
-      <GoogleAuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-      />
     </>
   );
 }

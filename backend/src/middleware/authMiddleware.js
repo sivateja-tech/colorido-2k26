@@ -3,8 +3,8 @@ const prisma = require('../services/prisma');
 const config = require('../config');
 
 /**
- * Authentication middleware for normal users.
- * Strictly verifies JWT bearer token and fetches user from DB.
+ * Authentication middleware for authenticated requests.
+ * Strictly verifies JWT bearer token and fetches user or admin from DB.
  */
 async function requireAuth(req, res, next) {
   try {
@@ -12,7 +12,7 @@ async function requireAuth(req, res, next) {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
-        message: 'Authentication required. Please sign in with your Google account.'
+        message: 'Authentication required. Please sign in to your account.'
       });
     }
 
@@ -28,25 +28,37 @@ async function requireAuth(req, res, next) {
       });
     }
 
-    if (!decoded.userId) {
+    const accountId = decoded.userId || decoded.adminId;
+    if (!accountId) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token structure. User ID missing.'
+        message: 'Invalid session structure.'
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId }
+    // Check User table first
+    let account = await prisma.user.findUnique({
+      where: { id: accountId }
     });
 
-    if (!user) {
+    // Check Admin table if not found in User and token indicates ADMIN
+    if (!account && (decoded.role === 'ADMIN' || decoded.adminId)) {
+      account = await prisma.admin.findUnique({
+        where: { id: accountId }
+      });
+      if (account) {
+        req.admin = account;
+      }
+    }
+
+    if (!account) {
       return res.status(401).json({
         success: false,
-        message: 'User profile not found or deleted.'
+        message: 'Account profile not found or session revoked.'
       });
     }
 
-    req.user = user;
+    req.user = account;
     next();
   } catch (err) {
     next(err);
@@ -64,9 +76,14 @@ async function optionalAuth(req, res, next) {
       const token = authHeader.split(' ')[1];
       try {
         const decoded = jwt.verify(token, config.JWT_SECRET);
-        if (decoded.userId) {
-          const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
-          if (user) req.user = user;
+        const accountId = decoded.userId || decoded.adminId;
+        if (accountId) {
+          let account = await prisma.user.findUnique({ where: { id: accountId } });
+          if (!account && (decoded.role === 'ADMIN' || decoded.adminId)) {
+            account = await prisma.admin.findUnique({ where: { id: accountId } });
+            if (account) req.admin = account;
+          }
+          if (account) req.user = account;
         }
       } catch (e) {
         // Silently ignore invalid optional tokens

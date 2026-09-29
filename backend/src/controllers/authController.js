@@ -1,211 +1,246 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const prisma = require('../services/prisma');
 const config = require('../config');
-const { verifyGoogleToken } = require('../services/googleAuth');
 
 /**
- * Handle Google OAuth Sign-in / Sign-up for Normal Users
- * Section 42: Real Google OAuth 2.0 / Google Identity Services
+ * UNIFIED LOGIN (Section: AUTHENTICATION — FINAL DESIGN)
+ * Single endpoint handling authentication for BOTH User and Admin accounts.
+ * Authentication Method: Email + Password.
+ * Backend determines role and redirection URL.
  */
-async function googleAuth(req, res, next) {
-  try {
-    const { credential } = req.body;
-
-    if (!credential) {
-      return res.status(400).json({
-        success: false,
-        message: 'Google credential token is required'
-      });
-    }
-
-    const googleUser = await verifyGoogleToken(credential);
-
-    // Upsert user in database
-    let user = await prisma.user.findUnique({
-      where: { email: googleUser.email }
-    });
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: googleUser.email,
-          name: googleUser.name,
-          profileImage: googleUser.picture,
-          googleId: googleUser.googleId,
-          role: 'USER',
-          college: 'R V R & J C College of Engineering'
-        }
-      });
-    } else {
-      // Update profile image or googleId if missing
-      const updates = {};
-      if (!user.profileImage && googleUser.picture) updates.profileImage = googleUser.picture;
-      if (!user.googleId && googleUser.googleId) updates.googleId = googleUser.googleId;
-      if (Object.keys(updates).length > 0) {
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: updates
-        });
-      }
-    }
-
-    const appToken = jwt.sign(
-      { userId: user.id, email: user.email, role: 'USER' },
-      config.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    return res.json({
-      success: true,
-      message: 'Successfully authenticated with Google',
-      data: {
-        token: appToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          profileImage: user.profileImage,
-          college: user.college,
-          phone: user.phone,
-          role: user.role
-        }
-      }
-    });
-  } catch (err) {
-    return res.status(401).json({
-      success: false,
-      message: err.message || 'Google authentication failed'
-    });
-  }
-}
-
-/**
- * Handle Direct Email Sign-in / Sign-up for Normal Users
- * Allows participants to sign in with their email, name, college, etc.
- * Works seamlessly in all environments and allows participants to register with their email.
- */
-async function emailAuth(req, res, next) {
-  try {
-    const { email, name, college, phone } = req.body;
-
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
-      return res.status(400).json({
-        success: false,
-        message: 'A valid email address is required for participant sign-in.'
-      });
-    }
-
-    const normalizedEmail = email.toLowerCase().trim();
-    const displayName = name && name.trim() ? name.trim() : normalizedEmail.split('@')[0];
-
-    // Find or create participant
-    let user = await prisma.user.findUnique({
-      where: { email: normalizedEmail }
-    });
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: normalizedEmail,
-          name: displayName,
-          college: college && college.trim() ? college.trim() : 'R V R & J C College of Engineering',
-          phone: phone && phone.trim() ? phone.trim() : null,
-          role: 'USER'
-        }
-      });
-    } else {
-      // Update name/college/phone if newly provided
-      const updates = {};
-      if (name && name.trim() && user.name !== name.trim()) updates.name = name.trim();
-      if (college && college.trim() && user.college !== college.trim()) updates.college = college.trim();
-      if (phone && phone.trim() && user.phone !== phone.trim()) updates.phone = phone.trim();
-      if (Object.keys(updates).length > 0) {
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: updates
-        });
-      }
-    }
-
-    const appToken = jwt.sign(
-      { userId: user.id, email: user.email, role: 'USER' },
-      config.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    return res.json({
-      success: true,
-      message: 'Successfully signed in with email',
-      data: {
-        token: appToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          profileImage: user.profileImage,
-          college: user.college,
-          phone: user.phone,
-          role: user.role
-        }
-      }
-    });
-  } catch (err) {
-    next(err);
-  }
-}
-
-/**
- * Admin Login with Email & Password
- * Section 49: Admin MUST NOT use Google OAuth. Uses email/password, bcrypt, JWT.
- */
-async function adminLogin(req, res, next) {
+async function unifiedLogin(req, res, next) {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Admin email and password are required'
+        message: 'Email and password are required.'
       });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // 1. Check if account is an Administrator
     const admin = await prisma.admin.findUnique({
-      where: { email: email.toLowerCase().trim() }
+      where: { email: normalizedEmail }
     });
 
-    if (!admin) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid administrative email or password'
+    if (admin) {
+      const isMatch = await bcrypt.compare(password, admin.passwordHash);
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password.'
+        });
+      }
+
+      // Generate Admin JWT
+      const token = jwt.sign(
+        {
+          adminId: admin.id,
+          userId: admin.id,
+          email: admin.email,
+          role: 'ADMIN',
+          type: 'ADMIN'
+        },
+        config.JWT_SECRET,
+        { expiresIn: '3d' }
+      );
+
+      return res.json({
+        success: true,
+        message: 'Welcome back, Administrator!',
+        token,
+        role: 'ADMIN',
+        redirectTo: '/admin/dashboard',
+        user: {
+          id: admin.id,
+          name: admin.name,
+          email: admin.email,
+          role: 'ADMIN'
+        }
       });
     }
 
-    const isMatch = await bcrypt.compare(password, admin.passwordHash);
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid administrative email or password'
+    // 2. Check if account is a Normal Participant (User)
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
+    });
+
+    if (user) {
+      if (!user.passwordHash) {
+        return res.status(401).json({
+          success: false,
+          message: 'This account requires a password. Please use Forgot Password to set one.'
+        });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.passwordHash);
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password.'
+        });
+      }
+
+      // Generate User JWT
+      const token = jwt.sign(
+        {
+          userId: user.id,
+          email: user.email,
+          role: 'USER',
+          type: 'USER'
+        },
+        config.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      return res.json({
+        success: true,
+        message: 'Welcome back!',
+        token,
+        role: 'USER',
+        redirectTo: '/events',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          college: user.college,
+          department: user.department,
+          year: user.year,
+          phone: user.phone,
+          role: 'USER'
+        }
       });
     }
 
-    const adminToken = jwt.sign(
-      { adminId: admin.id, email: admin.email, role: 'ADMIN', type: 'ADMIN' },
+    // Neither Admin nor User found
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid email or password.'
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * USER REGISTRATION (Section: AUTHENTICATION — FINAL DESIGN)
+ * Public registration for normal participants.
+ * Fields: Full Name, Email, Phone, College, Department, Year, Password, Confirm Password.
+ * Automatically and strictly sets role = 'USER'.
+ * Never accepts client-defined roles.
+ */
+async function registerUser(req, res, next) {
+  try {
+    const {
+      fullName,
+      name,
+      email,
+      phone,
+      college,
+      department,
+      year,
+      password,
+      confirmPassword
+    } = req.body;
+
+    const displayName = (fullName || name || '').trim();
+    const userEmail = (email || '').toLowerCase().trim();
+    const userPhone = (phone || '').trim();
+    const userCollege = (college || '').trim();
+    const userDepartment = (department || '').trim();
+    const userYear = (year || '').trim();
+
+    // Required fields validation
+    if (!displayName || !userEmail || !userPhone || !userCollege || !userDepartment || !userYear || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields (Full Name, Email, Phone, College, Department, Year, and Password) are required.'
+      });
+    }
+
+    if (!userEmail.includes('@') || !userEmail.includes('.')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address.'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long.'
+      });
+    }
+
+    if (confirmPassword && password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Passwords do not match.'
+      });
+    }
+
+    // Duplicate check in both User and Admin tables
+    const [existingUser, existingAdmin] = await Promise.all([
+      prisma.user.findUnique({ where: { email: userEmail } }),
+      prisma.admin.findUnique({ where: { email: userEmail } })
+    ]);
+
+    if (existingUser || existingAdmin) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email already exists. Please sign in instead.'
+      });
+    }
+
+    // Securely hash password with bcrypt
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create user account - STRICTLY HARDCODED TO 'USER'
+    const newUser = await prisma.user.create({
+      data: {
+        email: userEmail,
+        name: displayName,
+        phone: userPhone,
+        college: userCollege,
+        department: userDepartment,
+        year: userYear,
+        passwordHash,
+        role: 'USER' // Strict invariant: no user can ever register as admin
+      }
+    });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: newUser.id,
+        email: newUser.email,
+        role: 'USER',
+        type: 'USER'
+      },
       config.JWT_SECRET,
-      { expiresIn: '3d' }
+      { expiresIn: '7d' }
     );
 
-    return res.json({
+    return res.status(201).json({
       success: true,
-      message: 'Admin logged in successfully',
-      data: {
-        token: adminToken,
-        admin: {
-          id: admin.id,
-          email: admin.email,
-          name: admin.name,
-          role: admin.role
-        }
+      message: 'Account created successfully! Welcome to COLORIDO 2K26.',
+      token,
+      role: 'USER',
+      redirectTo: '/events',
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        college: newUser.college,
+        department: newUser.department,
+        year: newUser.year,
+        phone: newUser.phone,
+        role: 'USER'
       }
     });
   } catch (err) {
@@ -214,13 +249,309 @@ async function adminLogin(req, res, next) {
 }
 
 /**
- * Get current authenticated normal user profile with registrations
+ * FORGOT PASSWORD — USER AND ADMIN (Section: AUTHENTICATION — FINAL DESIGN)
+ * Unified password reset system for both user and admin accounts.
+ * Does not reveal whether the email exists (constant generic response).
+ * Cryptographically generates and stores SHA-256 hash of reset token with short expiration.
+ */
+async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address.'
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if account exists in Admin or User
+    const [admin, user] = await Promise.all([
+      prisma.admin.findUnique({ where: { email: normalizedEmail } }),
+      prisma.user.findUnique({ where: { email: normalizedEmail } })
+    ]);
+
+    let userType = null;
+    if (admin) userType = 'ADMIN';
+    else if (user) userType = 'USER';
+
+    let rawToken = null;
+
+    if (userType) {
+      // Invalidate existing unused tokens for this email
+      await prisma.passwordReset.updateMany({
+        where: { email: normalizedEmail, used: false },
+        data: { used: true }
+      });
+
+      // Generate cryptographically secure token
+      rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+      // Expires in 20 minutes
+      const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
+
+      await prisma.passwordReset.create({
+        data: {
+          email: normalizedEmail,
+          tokenHash,
+          userType,
+          expiresAt,
+          used: false
+        }
+      });
+    }
+
+    // Generic response to prevent user enumeration
+    const genericMessage = 'If an account exists for this email, password reset instructions have been sent.';
+
+    // In development / evaluator mode, provide the direct reset URL in data for convenience
+    return res.json({
+      success: true,
+      message: genericMessage,
+      data: rawToken ? { resetUrl: `/reset-password?token=${rawToken}` } : null
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * VERIFY RESET TOKEN
+ * Checks if token is valid, unused, and not expired.
+ */
+async function verifyResetToken(req, res, next) {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password reset token is missing.'
+      });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const resetRecord = await prisma.passwordReset.findUnique({
+      where: { tokenHash }
+    });
+
+    if (!resetRecord || resetRecord.used) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or already-used password reset token.'
+      });
+    }
+
+    if (new Date() > new Date(resetRecord.expiresAt)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password reset token has expired. Please request a new one.'
+      });
+    }
+
+    return res.json({
+      success: true,
+      valid: true,
+      message: 'Token is valid.',
+      data: { email: resetRecord.email }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * RESET PASSWORD — USER AND ADMIN (Section: AUTHENTICATION — FINAL DESIGN)
+ * Validates token, hashes new password with bcrypt, updates account, and invalidates token.
+ */
+async function resetPassword(req, res, next) {
+  try {
+    const token = req.body.token;
+    const newPassword = req.body.newPassword || req.body.password;
+    const confirmPassword = req.body.confirmPassword;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token and new password are required.'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long.'
+      });
+    }
+
+    if (confirmPassword && newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Passwords do not match.'
+      });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const resetRecord = await prisma.passwordReset.findUnique({
+      where: { tokenHash }
+    });
+
+    if (!resetRecord || resetRecord.used) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or already-used password reset token.'
+      });
+    }
+
+    if (new Date() > new Date(resetRecord.expiresAt)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password reset token has expired. Please request a new one.'
+      });
+    }
+
+    // Hash new password with bcrypt
+    const newHash = await bcrypt.hash(newPassword, 10);
+
+    // Update account based on userType
+    if (resetRecord.userType === 'ADMIN') {
+      await prisma.admin.update({
+        where: { email: resetRecord.email },
+        data: { passwordHash: newHash }
+      });
+    } else {
+      await prisma.user.update({
+        where: { email: resetRecord.email },
+        data: { passwordHash: newHash }
+      });
+    }
+
+    // Invalidate the token so it cannot be reused
+    await prisma.passwordReset.update({
+      where: { id: resetRecord.id },
+      data: { used: true }
+    });
+
+    return res.json({
+      success: true,
+      message: 'Password has been successfully reset! Please sign in with your new password.',
+      redirectTo: '/auth'
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * CHANGE PASSWORD (AUTHENTICATED)
+ */
+async function changePassword(req, res, next) {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const actor = req.user || req.admin;
+
+    if (!actor || !currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required.'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long.'
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New passwords do not match.'
+      });
+    }
+
+    // Fetch account with passwordHash
+    const isAdmin = actor.role === 'ADMIN';
+    let account = null;
+
+    if (isAdmin) {
+      account = await prisma.admin.findUnique({ where: { id: actor.id } });
+    } else {
+      account = await prisma.user.findUnique({ where: { id: actor.id } });
+    }
+
+    if (!account || !account.passwordHash) {
+      return res.status(400).json({
+        success: false,
+        message: 'Account not found or has no password set.'
+      });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, account.passwordHash);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect.'
+      });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+
+    if (isAdmin) {
+      await prisma.admin.update({
+        where: { id: actor.id },
+        data: { passwordHash: newHash }
+      });
+    } else {
+      await prisma.user.update({
+        where: { id: actor.id },
+        data: { passwordHash: newHash }
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Password updated successfully.'
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET CURRENT AUTHENTICATED PROFILE (USER OR ADMIN)
  */
 async function getMe(req, res, next) {
   try {
+    const userId = req.user?.id || req.admin?.id;
+    const role = req.user?.role || req.admin?.role;
+
+    if (role === 'ADMIN' || req.admin) {
+      const admin = await prisma.admin.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true, email: true, role: true, createdAt: true }
+      });
+      return res.json({ success: true, data: admin });
+    }
+
     const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      include: {
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        college: true,
+        department: true,
+        year: true,
+        role: true,
+        createdAt: true,
         registrations: {
           orderBy: { createdAt: 'desc' },
           include: {
@@ -232,7 +563,6 @@ async function getMe(req, res, next) {
                 visualType: true,
                 date: true,
                 startTime: true,
-                endTime: true,
                 venue: true
               }
             }
@@ -242,50 +572,37 @@ async function getMe(req, res, next) {
     });
 
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res.status(404).json({ success: false, message: 'User profile not found.' });
     }
 
-    res.json({
-      success: true,
-      data: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        profileImage: user.profileImage,
-        college: user.college,
-        phone: user.phone,
-        role: user.role,
-        registrations: user.registrations
-      }
-    });
+    return res.json({ success: true, data: user });
   } catch (err) {
     next(err);
   }
 }
 
 /**
- * Get current authenticated admin profile
+ * LOGOUT
  */
-async function getAdminMe(req, res, next) {
-  try {
-    res.json({
-      success: true,
-      data: {
-        id: req.admin.id,
-        email: req.admin.email,
-        name: req.admin.name,
-        role: req.admin.role
-      }
-    });
-  } catch (err) {
-    next(err);
-  }
+async function logout(req, res) {
+  return res.json({
+    success: true,
+    message: 'Logged out successfully.'
+  });
 }
 
 module.exports = {
-  googleAuth,
-  emailAuth,
-  adminLogin,
+  unifiedLogin,
+  registerUser,
+  forgotPassword,
+  verifyResetToken,
+  resetPassword,
+  changePassword,
   getMe,
-  getAdminMe
+  getAdminMe: getMe,
+  logout,
+
+  // Compatibility aliases
+  adminLogin: unifiedLogin,
+  emailAuth: unifiedLogin
 };

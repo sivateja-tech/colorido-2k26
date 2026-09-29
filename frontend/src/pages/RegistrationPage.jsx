@@ -4,7 +4,6 @@ import { Sparkles, Ticket, User, Mail, Phone, Building, BookOpen, Users, AlertCi
 import { fetchEvents, registerForEvent } from '../services/api';
 import DigitalPass from '../components/DigitalPass';
 import { useAuth } from '../context/AuthContext';
-import GoogleAuthModal from '../components/GoogleAuthModal';
 import EventSelectDropdown from '../components/EventSelectDropdown';
 
 export default function RegistrationPage() {
@@ -15,7 +14,6 @@ export default function RegistrationPage() {
 
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -94,9 +92,9 @@ export default function RegistrationPage() {
     e.preventDefault();
     setErrorMsg(null);
 
-    // Section 76: If guest, prompt for Google Login first
+    // If guest, prompt for login first
     if (!isAuthenticated) {
-      setAuthModalOpen(true);
+      navigate(`/auth?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
 
@@ -181,17 +179,16 @@ export default function RegistrationPage() {
                     <User className="w-5 h-5" />
                   </div>
                   <div className="text-xs">
-                    <p className="font-bold text-dark-text dark:text-dark-text light:text-light-text">Sign In with Email or Google</p>
+                    <p className="font-bold text-dark-text dark:text-dark-text light:text-light-text">Sign In to Your Account</p>
                     <p className="text-dark-text-secondary">Sign in with your email to pre-fill your information and save festival passes to your account.</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setAuthModalOpen(true)}
+                <Link
+                  to={`/auth?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover shrink-0 shadow-md shadow-brand-purple/20 transition-all"
                 >
                   Sign In / Register
-                </button>
+                </Link>
               </div>
             )}
 
@@ -360,20 +357,6 @@ export default function RegistrationPage() {
           </div>
         </div>
       )}
-
-      {/* Google Auth Modal */}
-      <GoogleAuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        onSuccess={(loggedUser) => {
-          setFormData(prev => ({
-            ...prev,
-            fullName: loggedUser.name || prev.fullName,
-            email: loggedUser.email || prev.email,
-            college: loggedUser.college || prev.college
-          }));
-        }}
-      />
     </div>
   );
 }

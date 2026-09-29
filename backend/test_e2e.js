@@ -104,9 +104,9 @@ async function runTests() {
     assert(contactResult.success === true, 'Contact response reports success');
     const submittedMsgId = contactResult.data?.id;
 
-    // 7. Admin Authentication
-    console.log('\n--- TEST 6: Administrator Authentication ---');
-    const adminLoginRes = await fetch(`${BASE_URL}/auth/admin/login`, {
+    // 7. Unified Administrator Authentication (Section: AUTHENTICATION — FINAL DESIGN)
+    console.log('\n--- TEST 6: Unified Authentication — Administrator Sign-In ---');
+    const adminLoginRes = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -115,10 +115,11 @@ async function runTests() {
       })
     });
     const adminLoginData = await adminLoginRes.json();
-    assert(adminLoginRes.status === 200, 'Admin login succeeds with valid credentials');
-    assert(Boolean(adminLoginData.data?.token), 'Admin JWT token returned in data.token');
-    assert(adminLoginData.data?.admin?.role === 'ADMIN', 'Admin role verified as ADMIN');
-    const adminToken = adminLoginData.data?.token;
+    assert(adminLoginRes.status === 200, 'Unified login succeeds with admin credentials');
+    assert(Boolean(adminLoginData.token), 'JWT token returned on unified login');
+    assert(adminLoginData.role === 'ADMIN', 'Admin role verified as strictly ADMIN');
+    assert(adminLoginData.redirectTo === '/admin/dashboard', 'Server dictates redirect to /admin/dashboard');
+    const adminToken = adminLoginData.token;
 
     // 8. Admin Protected Endpoints
     console.log('\n--- TEST 7: Admin Portal Protected Endpoints ---');
@@ -146,29 +147,125 @@ async function runTests() {
       assert(updateMsgRes.status === 200, 'Admin can resolve visitor inquiries');
     }
 
-    // 9. User Authentication & Registration Isolation
-    console.log('\n--- TEST 8: Participant Direct Email Sign-In / Sign-Up ---');
-    const emailLoginRes = await fetch(`${BASE_URL}/auth/email`, {
+    // 9. Unified User Registration (Privilege Escalation Prevention)
+    console.log('\n--- TEST 8: Unified User Registration & Role Enforcement ---');
+    const testRegEmail = `test_participant_${Date.now()}@rvrjc.ac.in`;
+    const signupRes = await fetch(`${BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'sivatejakodavatiganti@gmail.com',
-        name: 'Venkata Sivateja Kodavatiganti',
-        college: 'R V R & J C College of Engineering'
+        fullName: 'Test Participant',
+        email: testRegEmail,
+        phone: '9876543210',
+        college: 'R V R & J C College of Engineering',
+        department: 'Computer Science & Engineering',
+        year: '3rd Year B.Tech',
+        password: 'Password123!',
+        confirmPassword: 'Password123!',
+        role: 'ADMIN' // Malicious attempt to escalate privilege - must be ignored!
       })
     });
-    const emailLoginData = await emailLoginRes.json();
-    assert(emailLoginRes.status === 200, 'Direct Email Sign-in endpoint succeeds with 200 OK');
-    assert(Boolean(emailLoginData.data?.token), 'JWT token issued for email sign-in');
-    assert(emailLoginData.data?.user?.email === 'sivatejakodavatiganti@gmail.com', 'User profile matches submitted email');
+    const signupData = await signupRes.json();
+    assert(signupRes.status === 201, 'User registration succeeds with 201 Created');
+    assert(signupData.role === 'USER', 'Server strictly enforces role = USER (Privilege escalation blocked)');
+    assert(signupData.redirectTo === '/events', 'Server dictates redirect to /events for USER');
+    assert(Boolean(signupData.token), 'JWT token returned upon registration');
 
-    console.log('\n--- TEST 9: User Registration & Strict Data Isolation ---');
+    // Verify User Sign-In with Unified Login
+    console.log('\n--- TEST 9: Unified Authentication — User Sign-In ---');
+    const userLoginRes = await fetch(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: testRegEmail,
+        password: 'Password123!'
+      })
+    });
+    const userLoginData = await userLoginRes.json();
+    assert(userLoginRes.status === 200, 'Unified login succeeds for registered user');
+    assert(userLoginData.role === 'USER', 'Role confirmed as USER');
+    assert(userLoginData.redirectTo === '/events', 'Redirect confirmed as /events');
+
+    // 10. Password Reset Flow (Cryptographic Token & Generic Response)
+    console.log('\n--- TEST 10: Password Reset Flow (Security & Token Validation) ---');
+    // Test generic response for non-existing email
+    const nonExistingRes = await fetch(`${BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'nonexisting_evaluator@domain.org' })
+    });
+    const nonExistingData = await nonExistingRes.json();
+    assert(nonExistingRes.status === 200, 'Forgot password returns 200 for non-existing email');
+    assert(nonExistingData.message.includes('If an account exists'), 'Generic security message returned (Anti-enumeration)');
+
+    // Test forgot password for existing registered user
+    const forgotRes = await fetch(`${BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: testRegEmail })
+    });
+    const forgotData = await forgotRes.json();
+    assert(forgotRes.status === 200, 'Forgot password succeeds for registered user');
+    assert(forgotData.message.includes('If an account exists'), 'Generic security message returned');
+    const rawResetUrl = forgotData.data?.resetUrl;
+    assert(Boolean(rawResetUrl), 'Reset URL issued in dev mode');
+    const tokenMatch = rawResetUrl?.match(/token=([a-f0-9]+)/);
+    const rawToken = tokenMatch ? tokenMatch[1] : null;
+    assert(Boolean(rawToken), 'Raw reset token extracted successfully');
+
+    // Verify Token
+    if (rawToken) {
+      const verifyRes = await fetch(`${BASE_URL}/auth/verify-reset-token?token=${rawToken}`);
+      const verifyData = await verifyRes.json();
+      assert(verifyRes.status === 200 && verifyData.valid === true, 'Reset token verified successfully');
+
+      // Complete Password Reset
+      const newPassword = 'NewSecretPassword2026!';
+      const resetRes = await fetch(`${BASE_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: rawToken,
+          password: newPassword,
+          confirmPassword: newPassword
+        })
+      });
+      const resetData = await resetRes.json();
+      assert(resetRes.status === 200, 'Password reset completed successfully');
+
+      // Old password must fail
+      const oldLoginRes = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: testRegEmail,
+          password: 'Password123!'
+        })
+      });
+      assert(oldLoginRes.status === 401, 'Login with old password correctly rejected (401)');
+
+      // New password must succeed
+      const newLoginRes = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: testRegEmail,
+          password: newPassword
+        })
+      });
+      assert(newLoginRes.status === 200, 'Login with newly reset password succeeds (200)');
+    }
+
+    // Clean up test registered user
+    await prisma.passwordReset.deleteMany({ where: { email: testRegEmail } }).catch(() => {});
+    await prisma.user.deleteMany({ where: { email: testRegEmail } }).catch(() => {});
+
+    console.log('\n--- TEST 11: User Registration & Strict Data Isolation ---');
     // Create two test users directly in DB
     const testUserA = await prisma.user.upsert({
       where: { email: 'usera@rvrjc.ac.in' },
       update: {},
       create: {
-        googleId: 'test-google-user-a',
         email: 'usera@rvrjc.ac.in',
         name: 'User A (CSE)',
         college: 'R V R & J C College of Engineering',
@@ -180,7 +277,6 @@ async function runTests() {
       where: { email: 'userb@rvrjc.ac.in' },
       update: {},
       create: {
-        googleId: 'test-google-user-b',
         email: 'userb@rvrjc.ac.in',
         name: 'User B (IT)',
         college: 'R V R & J C College of Engineering',

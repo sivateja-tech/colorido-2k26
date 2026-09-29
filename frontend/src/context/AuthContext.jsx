@@ -1,5 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loginWithGoogle, loginWithEmail, loginAdmin, fetchCurrentUser, fetchAdminMe } from '../services/api';
+import {
+  login as apiLogin,
+  register as apiRegister,
+  forgotPassword as apiForgotPassword,
+  resetPassword as apiResetPassword,
+  changePassword as apiChangePassword,
+  logoutUserApi,
+  fetchCurrentUser,
+  fetchAdminMe
+} from '../services/api';
 
 const AuthContext = createContext();
 
@@ -11,14 +20,17 @@ export function AuthProvider({ children }) {
   // Initialize session from localStorage on startup
   useEffect(() => {
     async function initAuth() {
-      const savedUserToken = localStorage.getItem('colorido_user_token');
+      const savedToken = localStorage.getItem('colorido_token') || localStorage.getItem('colorido_user_token') || localStorage.getItem('colorido_admin_token');
       const savedUserData = localStorage.getItem('colorido_user');
-      const savedAdminToken = localStorage.getItem('colorido_admin_token');
       const savedAdminData = localStorage.getItem('colorido_admin');
 
       if (savedUserData) {
         try {
-          setUser(JSON.parse(savedUserData));
+          const parsed = JSON.parse(savedUserData);
+          setUser(parsed);
+          if (parsed.role === 'ADMIN') {
+            setAdmin(parsed);
+          }
         } catch (e) {
           localStorage.removeItem('colorido_user');
         }
@@ -32,35 +44,23 @@ export function AuthProvider({ children }) {
         }
       }
 
-      // Background verify and refresh profiles if tokens exist
-      if (savedUserToken) {
+      // Verify token in background
+      if (savedToken) {
         fetchCurrentUser()
           .then((res) => {
             if (res.data?.success) {
-              setUser(res.data.data);
-              localStorage.setItem('colorido_user', JSON.stringify(res.data.data));
+              const profile = res.data.data;
+              setUser(profile);
+              localStorage.setItem('colorido_user', JSON.stringify(profile));
+              if (profile.role === 'ADMIN') {
+                setAdmin(profile);
+                localStorage.setItem('colorido_admin', JSON.stringify(profile));
+              }
             }
           })
           .catch(() => {
-            // Expired or invalid user token
-            localStorage.removeItem('colorido_user_token');
-            localStorage.removeItem('colorido_user');
-            setUser(null);
-          });
-      }
-
-      if (savedAdminToken) {
-        fetchAdminMe()
-          .then((res) => {
-            if (res.data?.success) {
-              setAdmin(res.data.data);
-              localStorage.setItem('colorido_admin', JSON.stringify(res.data.data));
-            }
-          })
-          .catch(() => {
-            localStorage.removeItem('colorido_admin_token');
-            localStorage.removeItem('colorido_admin');
-            setAdmin(null);
+            // Token expired or invalid
+            clearSession();
           });
       }
 
@@ -70,95 +70,183 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  // Google Sign-in for Normal Users (Section 42)
-  const handleGoogleLogin = async (credential) => {
-    try {
-      const res = await loginWithGoogle(credential);
-      if (res.data.success) {
-        const { user: authedUser, token } = res.data.data;
-        setUser(authedUser);
-        localStorage.setItem('colorido_user_token', token);
-        localStorage.setItem('colorido_user', JSON.stringify(authedUser));
-        return { success: true, user: authedUser };
-      }
-      return { success: false, message: res.data.message || 'Google authentication failed' };
-    } catch (err) {
-      console.error('Google Sign-In failed:', err);
-      return {
-        success: false,
-        message: err.response?.data?.message || err.message || 'Google Sign-in failed.'
-      };
-    }
-  };
-
-  // Admin Login with Email & Password (Section 49)
-  const handleAdminLogin = async (email, password) => {
-    try {
-      const res = await loginAdmin(email, password);
-      if (res.data.success) {
-        const { admin: authedAdmin, token } = res.data.data;
-        setAdmin(authedAdmin);
-        localStorage.setItem('colorido_admin_token', token);
-        localStorage.setItem('colorido_admin', JSON.stringify(authedAdmin));
-        return { success: true, admin: authedAdmin };
-      }
-      return { success: false, message: res.data.message || 'Admin authentication failed' };
-    } catch (err) {
-      return {
-        success: false,
-        message: err.response?.data?.message || 'Invalid administrator email or password.'
-      };
-    }
-  };
-
-  // Direct Email Sign-in for Normal Users (Works seamlessly without Google Cloud config)
-  const handleEmailLogin = async (data) => {
-    try {
-      const res = await loginWithEmail(data);
-      if (res.data.success) {
-        const { user: authedUser, token } = res.data.data;
-        setUser(authedUser);
-        localStorage.setItem('colorido_user_token', token);
-        localStorage.setItem('colorido_user', JSON.stringify(authedUser));
-        return { success: true, user: authedUser };
-      }
-      return { success: false, message: res.data.message || 'Email authentication failed' };
-    } catch (err) {
-      console.error('Email Sign-In failed:', err);
-      return {
-        success: false,
-        message: err.response?.data?.message || err.message || 'Email Sign-in failed.'
-      };
-    }
-  };
-
-  // Logout normal user
-  const logoutUser = () => {
+  const clearSession = () => {
     setUser(null);
-    localStorage.removeItem('colorido_user_token');
-    localStorage.removeItem('colorido_user');
-  };
-
-  // Logout admin
-  const logoutAdmin = () => {
     setAdmin(null);
+    localStorage.removeItem('colorido_token');
+    localStorage.removeItem('colorido_user_token');
     localStorage.removeItem('colorido_admin_token');
+    localStorage.removeItem('colorido_user');
     localStorage.removeItem('colorido_admin');
   };
+
+  /**
+   * Unified Login (Email + Password for BOTH User and Admin)
+   * Backend returns role ('USER' or 'ADMIN') and redirectTo ('/events' or '/admin/dashboard')
+   */
+  const login = async (email, password) => {
+    try {
+      const res = await apiLogin(email, password);
+      if (res.data?.success) {
+        const { token, role, redirectTo, user: profile } = res.data;
+
+        // Persist token
+        localStorage.setItem('colorido_token', token);
+        localStorage.setItem('colorido_user', JSON.stringify(profile));
+
+        setUser(profile);
+
+        if (role === 'ADMIN') {
+          setAdmin(profile);
+          localStorage.setItem('colorido_admin_token', token);
+          localStorage.setItem('colorido_admin', JSON.stringify(profile));
+        } else {
+          setAdmin(null);
+          localStorage.setItem('colorido_user_token', token);
+          localStorage.removeItem('colorido_admin_token');
+          localStorage.removeItem('colorido_admin');
+        }
+
+        return {
+          success: true,
+          role,
+          redirectTo: redirectTo || (role === 'ADMIN' ? '/admin/dashboard' : '/events'),
+          user: profile
+        };
+      }
+
+      return {
+        success: false,
+        message: res.data?.message || 'Authentication failed.'
+      };
+    } catch (err) {
+      console.error('Login error:', err);
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Invalid email or password.'
+      };
+    }
+  };
+
+  /**
+   * User Registration (Public - Strictly role = 'USER')
+   */
+  const register = async (userData) => {
+    try {
+      const res = await apiRegister(userData);
+      if (res.data?.success) {
+        const { token, role, redirectTo, user: profile } = res.data;
+
+        localStorage.setItem('colorido_token', token);
+        localStorage.setItem('colorido_user_token', token);
+        localStorage.setItem('colorido_user', JSON.stringify(profile));
+
+        setUser(profile);
+        setAdmin(null);
+
+        return {
+          success: true,
+          role: role || 'USER',
+          redirectTo: redirectTo || '/events',
+          user: profile
+        };
+      }
+
+      return {
+        success: false,
+        message: res.data?.message || 'Registration failed.'
+      };
+    } catch (err) {
+      console.error('Registration error:', err);
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Registration failed. Please check your data and retry.'
+      };
+    }
+  };
+
+  /**
+   * Forgot Password
+   */
+  const forgotPassword = async (email) => {
+    try {
+      const res = await apiForgotPassword(email);
+      return res.data;
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Failed to process password reset request.'
+      };
+    }
+  };
+
+  /**
+   * Reset Password
+   */
+  const resetPassword = async (payload) => {
+    try {
+      const res = await apiResetPassword(payload);
+      return res.data;
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Failed to reset password.'
+      };
+    }
+  };
+
+  /**
+   * Change Password (Authenticated)
+   */
+  const changePassword = async (payload) => {
+    try {
+      const res = await apiChangePassword(payload);
+      return res.data;
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Failed to change password.'
+      };
+    }
+  };
+
+  /**
+   * Unified Logout
+   */
+  const logout = () => {
+    try {
+      logoutUserApi().catch(() => {});
+    } finally {
+      clearSession();
+    }
+  };
+
+  const isAdmin = user?.role === 'ADMIN' || admin?.role === 'ADMIN';
+  const isAuthenticated = Boolean(user || admin);
+  const currentRole = isAdmin ? 'ADMIN' : (user ? 'USER' : null);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         admin,
-        isAdmin: !!admin,
-        isAuthenticated: !!user,
+        role: currentRole,
+        isAdmin,
+        isAuthenticated,
         loading,
-        handleGoogleLogin,
-        handleEmailLogin,
-        handleAdminLogin,
-        logoutUser,
-        logoutAdmin,
+        login,
+        register,
+        logout,
+        forgotPassword,
+        resetPassword,
+        changePassword,
+
+        // Backward compatibility aliases
+        handleAdminLogin: (email, pwd) => login(email, pwd),
+        handleEmailLogin: (data) => login(data.email, data.password || data),
+        handleGoogleLogin: (data) => login(data.email, data.password),
+        logoutUser: logout,
+        logoutAdmin: logout,
         setUser
       }}
     >
@@ -168,5 +256,9 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }

@@ -34,21 +34,27 @@ export const fetchLeaderboard = () => api.get('/results/leaderboard');
 export const submitContactMessage = (data) => api.post('/contact', data);
 
 // -------------------------------------------------------------
-// User Auth & Registrations
+// Unified Auth Endpoints (Section: AUTHENTICATION — FINAL DESIGN)
 // -------------------------------------------------------------
-export const loginWithGoogle = (credential) => api.post('/auth/google', { credential });
-export const loginWithEmail = (data) => api.post('/auth/email', data);
+export const login = (email, password) => api.post('/auth/login', { email, password });
+export const register = (data) => api.post('/auth/register', data);
+export const forgotPassword = (email) => api.post('/auth/forgot-password', { email });
+export const verifyResetToken = (token) => api.get('/auth/verify-reset-token', { params: { token } });
+export const resetPassword = (data) => api.post('/auth/reset-password', data);
+export const changePassword = (data) => api.post('/auth/change-password', data);
+export const logoutUserApi = () => api.post('/auth/logout');
+
 export const fetchCurrentUser = () => api.get('/auth/me');
+export const fetchAdminMe = () => api.get('/auth/admin/me');
 
 export const registerForEvent = (data) => api.post('/registrations', data);
 export const fetchMyRegistrations = () => api.get('/registrations');
 export const fetchPassById = (id) => api.get(`/registrations/pass/${id}`);
 
-// -------------------------------------------------------------
-// Admin Auth & Portal (Section 50-56)
-// -------------------------------------------------------------
-export const loginAdmin = (email, password) => api.post('/auth/admin/login', { email, password });
-export const fetchAdminMe = () => api.get('/auth/admin/me');
+// Backward compatibility aliases
+export const loginAdmin = (email, password) => api.post('/auth/login', { email, password });
+export const loginWithEmail = (data) => api.post('/auth/login', data);
+export const loginWithGoogle = (credential) => api.post('/auth/login', { credential });
 export const fetchAdminDashboard = () => api.get('/admin/dashboard');
 
 // Admin Events
