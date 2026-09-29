@@ -100,7 +100,7 @@ export default function HomePage() {
               to="/events"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl text-sm sm:text-base font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-lg shadow-[#2980B9]/25 transition-all hover:scale-[1.02]"
             >
-              <span>Explore 29 Events</span>
+              <span>Explore Events</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 

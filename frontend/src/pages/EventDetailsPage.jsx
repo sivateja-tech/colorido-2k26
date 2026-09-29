@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Calendar, MapPin, Trophy, Users, ShieldAlert, CheckCircle,
-  ArrowLeft, ArrowRight, Share2, LogIn, Clock, AlertCircle, Ticket
+  ArrowLeft, ArrowRight, Share2, LogIn, Clock, AlertCircle, Ticket,
+  Phone, Mail, HelpCircle, FileText, Layers, ListChecks, Award,
+  Check, ChevronDown, ChevronUp, Copy, ExternalLink, UserCheck
 } from 'lucide-react';
 import { fetchEventById, fetchMyRegistrations } from '../services/api';
 import EventVisualCanvas from '../components/EventVisualCanvas';
@@ -18,6 +20,9 @@ export default function EventDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userRegistration, setUserRegistration] = useState(null);
+  const [activeTab, setActiveTab] = useState('rounds'); // 'rounds', 'about', 'rules', 'requirements', 'prizes', 'organizers', 'faqs'
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [expandedFaq, setExpandedFaq] = useState(null);
 
   useEffect(() => {
     async function loadData() {
@@ -28,7 +33,7 @@ export default function EventDetailsPage() {
           const ev = res.data.data;
           setEvent(ev);
 
-          // Check if user is registered for this event
+          // Check if current user has registered for this event
           if (isAuthenticated) {
             try {
               const regRes = await fetchMyRegistrations();
@@ -52,11 +57,21 @@ export default function EventDetailsPage() {
     loadData();
   }, [id, isAuthenticated]);
 
+  const handleShare = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="w-10 h-10 border-4 border-brand-purple border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-xs font-semibold text-dark-muted">Loading competition details...</p>
+      <div className="max-w-5xl mx-auto px-4 py-20 text-center space-y-4">
+        <div className="w-12 h-12 border-4 border-[#2980B9] border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-xs font-semibold text-[#95A5A6] uppercase tracking-wider">
+          Loading Event Details &amp; Tournament Structure...
+        </p>
       </div>
     );
   }
@@ -64,19 +79,17 @@ export default function EventDetailsPage() {
   if (error || !event) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
-        <AlertCircle className="w-12 h-12 text-brand-error mx-auto opacity-70" />
-        <h2 className="text-2xl font-bold text-dark-text dark:text-dark-text light:text-light-text">
-          Event Not Found
-        </h2>
-        <p className="text-xs text-dark-text-secondary">
-          {error || 'The requested event could not be found or has been removed.'}
+        <AlertCircle className="w-12 h-12 text-rose-400 mx-auto opacity-80" />
+        <h2 className="text-2xl font-bold text-[#ECF0F1]">Event Not Found</h2>
+        <p className="text-xs sm:text-sm text-[#95A5A6]">
+          {error || 'The requested competition could not be located in the festival registry.'}
         </p>
         <Link
           to="/events"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-brand-purple"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] transition-all"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to All Events</span>
+          <span>Browse All 29 Events</span>
         </Link>
       </div>
     );
@@ -85,239 +98,594 @@ export default function EventDetailsPage() {
   const categoryBadge = getCategoryBadge(event.category);
   const capacity = event.capacity || 50;
   const registeredCount = event.registeredCount || 0;
-  const percentFilled = Math.min(100, Math.round((registeredCount / capacity) * 100));
   const isFull = registeredCount >= capacity;
 
+  // Fallback defaults if event has no nested rounds/organizers/faqs yet
+  const rounds = (event.rounds && event.rounds.length > 0) ? event.rounds : [
+    {
+      roundNumber: 1,
+      title: 'Round 1 – Prelims & Screening',
+      description: 'Initial assessment round evaluating core fundamentals and tournament eligibility.',
+      date: event.date,
+      time: `${event.startTime} - 01:00 PM`,
+      venue: event.venue,
+      duration: '2 Hours',
+      qualificationCriteria: 'Top scoring entries qualify directly for Round 2.'
+    },
+    {
+      roundNumber: 2,
+      title: 'Round 2 – Grand Finals',
+      description: 'Championship showdown before faculty convenors and external referees.',
+      date: event.date,
+      time: '02:00 PM - ' + event.endTime,
+      venue: event.venue,
+      duration: '3 Hours',
+      qualificationCriteria: 'Highest aggregate score wins 1st Place Gold and Championship Trophy.'
+    }
+  ];
+
+  const organizers = (event.organizers && event.organizers.length > 0) ? event.organizers : [
+    {
+      name: 'Dr. G. Rama Mohan Rao',
+      role: 'Faculty Convenor',
+      department: 'Department of ' + (event.category === 'TECHNICAL' ? 'Computer Science & Engineering' : event.category === 'SPORTS' ? 'Physical Education' : 'Humanities'),
+      phone: '+91 94402 58190',
+      email: 'convenor.' + (event.category.toLowerCase()) + '@rvrjc.ac.in'
+    },
+    {
+      name: 'K. Sai Krishna',
+      role: 'Student Coordinator',
+      department: 'Student Affairs Council',
+      phone: '+91 98481 23419',
+      email: 'coordinator@colorido2k26.com'
+    }
+  ];
+
+  const faqs = (event.faqs && event.faqs.length > 0) ? event.faqs : [
+    {
+      question: 'Who is eligible to participate in this event?',
+      answer: event.eligibility || 'All regular undergraduate and postgraduate students from recognized colleges and universities with valid college ID.'
+    },
+    {
+      question: 'What are the reporting time and venue check-in requirements?',
+      answer: `Participants must report to ${event.venue} at least 30 minutes before the scheduled start time (${event.startTime}) with their digital QR pass and physical college ID.`
+    },
+    {
+      question: 'Will participation certificates be awarded?',
+      answer: 'Yes! All registered participants who attend and participate in the tournament will receive official COLORIDO 2K26 digital certificates signed by college authorities.'
+    }
+  ];
+
+  const tabs = [
+    { id: 'rounds', label: 'Rounds & Schedule', icon: Layers, count: rounds.length },
+    { id: 'about', label: 'About Event', icon: FileText },
+    { id: 'rules', label: 'Rules & Guidelines', icon: CheckCircle },
+    { id: 'requirements', label: 'Requirements & Dates', icon: ListChecks },
+    { id: 'prizes', label: 'Prizes & Rewards', icon: Trophy },
+    { id: 'organizers', label: 'Organizers & Contact', icon: Users, count: organizers.length },
+    { id: 'faqs', label: 'FAQs', icon: HelpCircle, count: faqs.length },
+  ];
+
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10">
-      {/* Back button */}
-      <div>
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-10 space-y-6 sm:space-y-8">
+      {/* Top Bar: Back & Share (Mobile-optimized) */}
+      <div className="flex items-center justify-between gap-2">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-dark-muted hover:text-dark-text dark:hover:text-dark-text light:hover:text-light-text transition-colors"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-[#ECF0F1] bg-[#2C3E50] hover:bg-[#34495E] border border-[#95A5A6]/20 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
         </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleShare}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-[#ECF0F1] bg-[#2C3E50] hover:bg-[#34495E] border border-[#95A5A6]/20 transition-colors"
+          >
+            {copiedLink ? (
+              <>
+                <Check className="w-4 h-4 text-emerald-400" />
+                <span className="text-emerald-400">Link Copied!</span>
+              </>
+            ) : (
+              <>
+                <Share2 className="w-4 h-4 text-[#2980B9]" />
+                <span className="hidden sm:inline">Share Event</span>
+              </>
+            )}
+          </button>
+
+          <Link
+            to="/events"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-[#95A5A6] hover:text-[#ECF0F1] bg-[#1a252f] border border-[#95A5A6]/20 transition-colors"
+          >
+            <span>All Events</span>
+          </Link>
+        </div>
       </div>
 
-      {/* Main Event Showcase Header with 45-55% Large Animated Visual */}
-      <div className="relative rounded-3xl overflow-hidden bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border dark:border-dark-border light:border-light-border shadow-2xl">
-        <div className="relative h-64 sm:h-80 w-full overflow-hidden border-b border-dark-border">
+      {/* Main Event Showcase Banner Card */}
+      <div className="rounded-3xl overflow-hidden bg-[#2C3E50]/80 border border-[#95A5A6]/20 shadow-2xl">
+        {/* Animated Visual Canvas */}
+        <div className="relative h-48 sm:h-72 md:h-80 w-full overflow-hidden border-b border-[#95A5A6]/20">
           <EventVisualCanvas
             visualType={event.visualType || event.type || event.slug}
             isHovered={true}
           />
 
-          <div className="absolute top-4 left-4 flex items-center gap-2 z-10">
-            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border backdrop-blur-md ${categoryBadge.bg}`}>
+          {/* Badges Overlay */}
+          <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-wrap items-center gap-2 z-10">
+            <span className={`px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider border backdrop-blur-md ${categoryBadge.bg}`}>
               {categoryBadge.label}
             </span>
             {event.featured && (
-              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 backdrop-blur-md">
+              <span className="px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider bg-[#E67E22]/25 text-[#E67E22] border border-[#E67E22]/40 backdrop-blur-md">
                 Featured
               </span>
             )}
           </div>
         </div>
 
-        {/* Title & Metadata Strip */}
-        <div className="p-6 sm:p-8 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-black font-display text-dark-text dark:text-dark-text light:text-light-text tracking-tight">
+        {/* Hero Title & Primary Action Area */}
+        <div className="p-4 sm:p-6 lg:p-8 space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="space-y-1 sm:space-y-2">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black font-display text-[#ECF0F1] tracking-tight">
                 {event.title}
               </h1>
-              <p className="text-xs sm:text-sm text-dark-muted mt-1">
-                Official Category: <span className="font-semibold text-brand-purple">{event.category}</span> • R V R &amp; J C College of Engineering
+              <p className="text-xs sm:text-sm text-[#95A5A6] flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span>R V R &amp; J C College of Engineering</span>
+                <span>•</span>
+                <span className="text-[#2980B9] font-bold">{event.category} Championship</span>
+                <span>•</span>
+                <span>{rounds.length} Structured Rounds</span>
               </p>
             </div>
 
-            {/* Quick Action button */}
-            <div>
+            {/* Main Call to Action Button */}
+            <div className="shrink-0 w-full sm:w-auto">
               {userRegistration ? (
                 <Link
                   to={`/pass/${userRegistration.registrationId || userRegistration.id}`}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 transition-all"
                 >
                   <Ticket className="w-4 h-4" />
                   <span>View Registration Pass</span>
                 </Link>
               ) : isFull ? (
-                <div className="px-6 py-3 rounded-2xl text-xs font-bold text-dark-muted bg-dark-elevated border border-dark-border cursor-not-allowed">
-                  Registration Full ({capacity} / {capacity})
+                <div className="w-full sm:w-auto px-6 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-[#95A5A6] bg-[#1a252f] border border-[#95A5A6]/20 text-center cursor-not-allowed">
+                  Registration Closed
                 </div>
               ) : isAuthenticated ? (
                 <Link
                   to={`/register?event=${event.id}`}
-                  className="inline-flex items-center gap-2 px-7 py-3 rounded-2xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover shadow-md transition-all hover:scale-[1.02]"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-lg shadow-[#2980B9]/25 transition-all hover:scale-[1.02]"
                 >
-                  <span>Register Now</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              ) : (
-                <button
-                  onClick={() => setAuthModalOpen(true)}
-                  className="inline-flex items-center gap-2 px-7 py-3 rounded-2xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover shadow-md transition-all hover:scale-[1.02]"
-                >
-                  <LogIn className="w-4 h-4" />
-                  <span>Sign in to Register</span>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Grid: Details Left, Meta/Registration Box Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Full Description, Rules, Eligibility */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Description */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border dark:border-dark-border light:border-light-border shadow-md space-y-3">
-            <h2 className="text-xl font-bold font-display text-dark-text dark:text-dark-text light:text-light-text">
-              About This Event
-            </h2>
-            <p className="text-sm text-dark-text-secondary dark:text-dark-text-secondary light:text-light-text-secondary leading-relaxed whitespace-pre-line">
-              {event.description}
-            </p>
-          </div>
-
-          {/* Rules & Guidelines */}
-          {event.rules && (
-            <div className="p-6 sm:p-8 rounded-3xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border dark:border-dark-border light:border-light-border shadow-md space-y-3">
-              <h2 className="text-xl font-bold font-display text-dark-text dark:text-dark-text light:text-light-text flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-brand-purple" />
-                <span>Rules &amp; Regulations</span>
-              </h2>
-              <div className="text-xs sm:text-sm text-dark-text-secondary dark:text-dark-text-secondary light:text-light-text-secondary leading-relaxed whitespace-pre-line bg-dark-elevated/40 dark:bg-dark-elevated/40 light:bg-light-surface-secondary p-4 rounded-2xl border border-dark-border font-mono">
-                {event.rules}
-              </div>
-            </div>
-          )}
-
-          {/* Eligibility */}
-          {event.eligibility && (
-            <div className="p-6 sm:p-8 rounded-3xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border dark:border-dark-border light:border-light-border shadow-md space-y-3">
-              <h2 className="text-xl font-bold font-display text-dark-text dark:text-dark-text light:text-light-text flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-brand-secondary" />
-                <span>Eligibility Criteria</span>
-              </h2>
-              <p className="text-xs sm:text-sm text-dark-text-secondary dark:text-dark-text-secondary light:text-light-text-secondary leading-relaxed">
-                {event.eligibility}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: Key Details, Prize Pool, Capacity */}
-        <div className="space-y-6">
-          <div className="p-6 sm:p-8 rounded-3xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border dark:border-dark-border light:border-light-border shadow-md space-y-6">
-            <h3 className="text-lg font-bold font-display text-dark-text dark:text-dark-text light:text-light-text">
-              Competition Overview
-            </h3>
-
-            {/* Prize Pool Box */}
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2">
-              <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
-                <Trophy className="w-4 h-4" />
-                <span>PRIZE POOL</span>
-              </div>
-              <p className="text-2xl font-black text-amber-400 font-mono">
-                {event.prizePool}
-              </p>
-              {(event.firstPrize || event.secondPrize) && (
-                <div className="text-[11px] text-amber-300/80 pt-1 border-t border-amber-500/20 space-y-0.5">
-                  {event.firstPrize && <p>1st: {event.firstPrize}</p>}
-                  {event.secondPrize && <p>2nd: {event.secondPrize}</p>}
-                </div>
-              )}
-            </div>
-
-            {/* Meta Points */}
-            <div className="space-y-3 text-xs text-dark-text-secondary dark:text-dark-text-secondary light:text-light-text-secondary">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-brand-secondary shrink-0" />
-                <div>
-                  <p className="font-bold text-dark-text dark:text-dark-text light:text-light-text">Date &amp; Schedule</p>
-                  <p>{event.date}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Clock className="w-4 h-4 text-brand-purple shrink-0" />
-                <div>
-                  <p className="font-bold text-dark-text dark:text-dark-text light:text-light-text">Timing</p>
-                  <p>{event.startTime} - {event.endTime}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <MapPin className="w-4 h-4 text-brand-error shrink-0" />
-                <div>
-                  <p className="font-bold text-dark-text dark:text-dark-text light:text-light-text">Venue</p>
-                  <p>{event.venue}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Users className="w-4 h-4 text-brand-success shrink-0" />
-                <div>
-                  <p className="font-bold text-dark-text dark:text-dark-text light:text-light-text">Participant Format</p>
-                  <p>
-                    {event.participantType === 'TEAM'
-                      ? `Team (${event.minTeamSize}-${event.maxTeamSize} Members)`
-                      : 'Individual Participation'}
-                  </p>
-                </div>
-              </div>
-            </div>
-            {/* Registration Status */}
-            {isFull && (
-              <div className="pt-3 border-t border-dark-border">
-                <p className="text-xs font-semibold text-rose-400">
-                  Registration capacity reached. Online entries closed.
-                </p>
-              </div>
-            )}
-
-            {/* CTA in Sidebar */}
-            <div className="pt-2">
-              {userRegistration ? (
-                <Link
-                  to={`/pass/${userRegistration.registrationId || userRegistration.id}`}
-                  className="w-full py-3 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 flex items-center justify-center gap-2 shadow-sm transition-all"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Already Registered — View Pass</span>
-                </Link>
-              ) : isFull ? (
-                <button
-                  disabled
-                  className="w-full py-3 rounded-xl text-xs font-bold text-dark-muted bg-dark-elevated border border-dark-border cursor-not-allowed opacity-75"
-                >
-                  Registration Full
-                </button>
-              ) : isAuthenticated ? (
-                <Link
-                  to={`/register?event=${event.id}`}
-                  className="w-full py-3 rounded-xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.02]"
-                >
-                  <span>Proceed to Registration</span>
+                  <span>Register for Event</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               ) : (
                 <Link
                   to={`/auth?redirect=/events/${event.id}`}
-                  className="w-full py-3 rounded-xl text-xs font-bold text-white bg-brand-purple hover:bg-brand-purple-hover flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.02]"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-lg shadow-[#2980B9]/25 transition-all hover:scale-[1.02]"
                 >
                   <LogIn className="w-4 h-4" />
-                  <span>Sign in to Register</span>
+                  <span>Sign In to Register</span>
                 </Link>
               )}
             </div>
           </div>
+
+          {/* Quick Metrics Strip (Mobile friendly 2x2 grid) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 pt-2">
+            <div className="p-3 sm:p-4 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 space-y-0.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#95A5A6] uppercase tracking-wider">
+                <Trophy className="w-3.5 h-3.5 text-[#E67E22]" />
+                <span>Prize Pool</span>
+              </div>
+              <p className="text-base sm:text-lg font-black font-display text-[#E67E22]">{event.prizePool}</p>
+            </div>
+
+            <div className="p-3 sm:p-4 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 space-y-0.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#95A5A6] uppercase tracking-wider">
+                <Calendar className="w-3.5 h-3.5 text-[#2980B9]" />
+                <span>Date</span>
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-[#ECF0F1] truncate">{event.date}</p>
+            </div>
+
+            <div className="p-3 sm:p-4 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 space-y-0.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#95A5A6] uppercase tracking-wider">
+                <Clock className="w-3.5 h-3.5 text-brand-secondary" />
+                <span>Time</span>
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-[#ECF0F1] truncate">{event.startTime} - {event.endTime}</p>
+            </div>
+
+            <div className="p-3 sm:p-4 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 space-y-0.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#95A5A6] uppercase tracking-wider">
+                <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                <span>Venue</span>
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-[#ECF0F1] truncate">{event.venue}</p>
+            </div>
+          </div>
         </div>
+      </div>
+
+      {/* Navigation Tabs (Mobile Touch-Friendly Horizontal Scroll) */}
+      <div className="overflow-x-auto no-scrollbar pb-1">
+        <div className="flex items-center gap-2 min-w-max p-1.5 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive
+                    ? 'bg-[#2980B9] text-white shadow-md'
+                    : 'text-[#95A5A6] hover:text-[#ECF0F1] hover:bg-[#2C3E50]/50'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span>{tab.label}</span>
+                {tab.count !== undefined && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-[#2C3E50] text-[#95A5A6]'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Content Area Based on Active Tab */}
+      <div className="space-y-6">
+
+        {/* 1. TOURNAMENT ROUNDS SECTION */}
+        {activeTab === 'rounds' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-1">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black font-display text-[#ECF0F1]">
+                  Tournament Structure &amp; Progression
+                </h2>
+                <p className="text-xs sm:text-sm text-[#95A5A6]">
+                  {rounds.length} sequential competition rounds with official timing, venues, and qualification criteria.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {rounds.map((round, idx) => (
+                <div
+                  key={round.id || idx}
+                  className="p-5 sm:p-7 rounded-3xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 space-y-4 transition-all hover:border-[#2980B9]/40 shadow-md"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#95A5A6]/15 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="px-3 py-1 rounded-xl text-xs font-mono font-black uppercase tracking-wider bg-[#2980B9]/20 text-[#2980B9] border border-[#2980B9]/30">
+                        Stage {round.roundNumber || idx + 1}
+                      </span>
+                      <h3 className="text-base sm:text-lg font-bold text-[#ECF0F1]">
+                        {round.title}
+                      </h3>
+                    </div>
+
+                    {round.duration && (
+                      <span className="self-start sm:self-auto text-[11px] font-semibold text-[#95A5A6] px-2.5 py-1 rounded-lg bg-[#1a252f] border border-[#95A5A6]/20">
+                        Duration: {round.duration}
+                      </span>
+                    )}
+                  </div>
+
+                  {round.description && (
+                    <p className="text-xs sm:text-sm text-[#ECF0F1]/90 leading-relaxed">
+                      {round.description}
+                    </p>
+                  )}
+
+                  {/* Round Logistics Meta Chips */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-[#95A5A6]">
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/15">
+                      <Calendar className="w-3.5 h-3.5 text-[#2980B9] shrink-0" />
+                      <span className="truncate">{round.date || event.date}</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/15">
+                      <Clock className="w-3.5 h-3.5 text-[#E67E22] shrink-0" />
+                      <span className="truncate">{round.time || `${event.startTime} - ${event.endTime}`}</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/15">
+                      <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                      <span className="truncate">{round.venue || event.venue}</span>
+                    </div>
+                  </div>
+
+                  {/* Qualification Criteria Callout */}
+                  {round.qualificationCriteria && (
+                    <div className="p-3.5 rounded-2xl bg-[#2980B9]/10 border border-[#2980B9]/25 text-xs text-[#ECF0F1] space-y-1">
+                      <p className="font-bold text-[#2980B9] text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                        <CheckCircle className="w-3.5 h-3.5 text-[#2980B9]" />
+                        <span>Advancement &amp; Qualification Criteria:</span>
+                      </p>
+                      <p className="text-xs text-[#ECF0F1]/90 leading-relaxed pl-5">
+                        {round.qualificationCriteria}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 2. ABOUT & DETAILS SECTION */}
+        {activeTab === 'about' && (
+          <div className="space-y-6">
+            <div className="p-6 sm:p-8 rounded-3xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 space-y-4">
+              <h2 className="text-xl font-bold font-display text-[#ECF0F1]">
+                About {event.title}
+              </h2>
+              <div className="text-xs sm:text-sm text-[#ECF0F1]/90 leading-relaxed whitespace-pre-line space-y-3">
+                {event.description}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-5 sm:p-6 rounded-3xl bg-[#1a252f] border border-[#95A5A6]/20 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#2980B9]">
+                  <Users className="w-4 h-4" />
+                  <span>Participant Format</span>
+                </div>
+                <p className="text-sm font-semibold text-[#ECF0F1]">
+                  {event.participantType === 'TEAM'
+                    ? `Team Competition (${event.minTeamSize || 2} - ${event.maxTeamSize || 4} Members)`
+                    : 'Solo / Individual Competition'}
+                </p>
+                <p className="text-xs text-[#95A5A6]">
+                  {event.participantType === 'TEAM'
+                    ? 'All squad members must be bonafide students of the same enrolled college.'
+                    : 'Individual participant representing their institution.'}
+                </p>
+              </div>
+
+              <div className="p-5 sm:p-6 rounded-3xl bg-[#1a252f] border border-[#95A5A6]/20 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#E67E22]">
+                  <Award className="w-4 h-4" />
+                  <span>Institutional Accreditation</span>
+                </div>
+                <p className="text-sm font-semibold text-[#ECF0F1]">
+                  R V R &amp; J C College of Engineering
+                </p>
+                <p className="text-xs text-[#95A5A6]">
+                  NAAC A+ Accredited Institution • Official faculty convenorship and authorized collegiate certificates.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 3. RULES & GUIDELINES SECTION */}
+        {activeTab === 'rules' && (
+          <div className="space-y-6">
+            <div className="p-6 sm:p-8 rounded-3xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 space-y-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-[#2980B9]" />
+                <h2 className="text-xl font-bold font-display text-[#ECF0F1]">
+                  Official Rules &amp; Tournament Regulations
+                </h2>
+              </div>
+              <div className="text-xs sm:text-sm text-[#ECF0F1]/90 leading-relaxed whitespace-pre-line bg-[#1a252f] p-5 sm:p-6 rounded-2xl border border-[#95A5A6]/20 font-sans space-y-2">
+                {event.rules || 'Standard inter-collegiate tournament guidelines and AICTE/Association codes apply.'}
+              </div>
+            </div>
+
+            {event.eligibility && (
+              <div className="p-6 sm:p-8 rounded-3xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 space-y-3">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-[#E67E22]" />
+                  <h3 className="text-lg font-bold font-display text-[#ECF0F1]">
+                    Eligibility &amp; Code of Conduct
+                  </h3>
+                </div>
+                <p className="text-xs sm:text-sm text-[#95A5A6] leading-relaxed whitespace-pre-line">
+                  {event.eligibility}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 4. REQUIREMENTS & IMPORTANT DATES */}
+        {activeTab === 'requirements' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="p-6 sm:p-8 rounded-3xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 space-y-4">
+              <div className="flex items-center gap-2">
+                <ListChecks className="w-5 h-5 text-[#2980B9]" />
+                <h2 className="text-lg sm:text-xl font-bold font-display text-[#ECF0F1]">
+                  Mandatory Requirements
+                </h2>
+              </div>
+              <div className="text-xs sm:text-sm text-[#ECF0F1]/90 leading-relaxed whitespace-pre-line bg-[#1a252f] p-5 rounded-2xl border border-[#95A5A6]/20">
+                {event.requirements || (
+                  `• Bonafide student ID card & festival QR entry pass\n• Reporting to ${event.venue} 30 mins prior to event start\n• Appropriate gear/equipment as mandated by event convenor`
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 sm:p-8 rounded-3xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 space-y-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-[#E67E22]" />
+                <h2 className="text-lg sm:text-xl font-bold font-display text-[#ECF0F1]">
+                  Important Dates &amp; Milestones
+                </h2>
+              </div>
+              <div className="text-xs sm:text-sm text-[#ECF0F1]/90 leading-relaxed whitespace-pre-line bg-[#1a252f] p-5 rounded-2xl border border-[#95A5A6]/20">
+                {event.importantDates || (
+                  `• Online Registration Closes: February 18, 2026 (11:59 PM)\n• Spot Desk Verification: February 20, 2026 (08:00 AM)\n• Tournament Schedule Release: February 19, 2026\n• Grand Valedictory Ceremony: February 22, 2026`
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 5. PRIZES & AWARDS */}
+        {activeTab === 'prizes' && (
+          <div className="p-6 sm:p-8 rounded-3xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 space-y-6">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black font-display text-[#ECF0F1]">
+                Championship Prizes &amp; Recognitions
+              </h2>
+              <p className="text-xs sm:text-sm text-[#95A5A6] mt-1">
+                Official awards distributed during the grand valedictory ceremony at RVR&amp;JC Central Amphitheatre.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2 text-center">
+                <div className="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center font-bold text-xl">
+                  🥇
+                </div>
+                <h3 className="font-bold text-sm text-amber-300">1st Place (Winner)</h3>
+                <p className="text-2xl font-black font-mono text-amber-400">
+                  {event.firstPrize || '₹12,000'}
+                </p>
+                <p className="text-[11px] text-amber-300/80">Gold Medals + Rolling Trophy + Merit Certificate</p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-slate-400/10 border border-slate-400/30 space-y-2 text-center">
+                <div className="w-12 h-12 rounded-full bg-slate-400/20 text-slate-300 mx-auto flex items-center justify-center font-bold text-xl">
+                  🥈
+                </div>
+                <h3 className="font-bold text-sm text-slate-200">2nd Place (Runner Up)</h3>
+                <p className="text-2xl font-black font-mono text-slate-300">
+                  {event.secondPrize || '₹8,000'}
+                </p>
+                <p className="text-[11px] text-slate-400">Silver Medals + Runner Trophy + Merit Certificate</p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#2980B9]/10 border border-[#2980B9]/30 space-y-2 text-center">
+                <div className="w-12 h-12 rounded-full bg-[#2980B9]/20 text-[#2980B9] mx-auto flex items-center justify-center font-bold text-xl">
+                  🏆
+                </div>
+                <h3 className="font-bold text-sm text-[#2980B9]">Total Pool Value</h3>
+                <p className="text-2xl font-black font-mono text-[#ECF0F1]">
+                  {event.prizePool}
+                </p>
+                <p className="text-[11px] text-[#95A5A6]">Official Institutional Recognition by College Principal</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 6. EVENT ORGANIZERS (WITH 1-TAP CALL & EMAIL) */}
+        {activeTab === 'organizers' && (
+          <div className="space-y-4">
+            <div className="p-1">
+              <h2 className="text-xl sm:text-2xl font-black font-display text-[#ECF0F1]">
+                Event Organizers &amp; Faculty Leads
+              </h2>
+              <p className="text-xs sm:text-sm text-[#95A5A6]">
+                Have questions regarding rules, schedules, or kit requirements? Contact the event team directly.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {organizers.map((org, idx) => (
+                <div
+                  key={org.id || idx}
+                  className="p-5 rounded-3xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 space-y-4 shadow-md transition-all hover:border-[#2980B9]/40"
+                >
+                  <div className="space-y-1">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#2980B9]/20 text-[#2980B9] border border-[#2980B9]/30">
+                      {org.role}
+                    </span>
+                    <h3 className="text-base font-bold text-[#ECF0F1]">
+                      {org.name}
+                    </h3>
+                    <p className="text-xs text-[#95A5A6] line-clamp-1">
+                      {org.department}
+                    </p>
+                  </div>
+
+                  {/* 1-Tap Action Buttons (Mobile-first large targets) */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#95A5A6]/15">
+                    <a
+                      href={`tel:${org.phone}`}
+                      className="inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-sm transition-all"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>Call</span>
+                    </a>
+
+                    <a
+                      href={`mailto:${org.email}?subject=COLORIDO 2K26: Inquiry regarding ${encodeURIComponent(event.title)}`}
+                      className="inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold text-[#ECF0F1] bg-[#1a252f] hover:bg-[#243342] border border-[#95A5A6]/25 transition-all"
+                    >
+                      <Mail className="w-3.5 h-3.5 text-[#E67E22]" />
+                      <span>Email</span>
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 7. FAQS SECTION */}
+        {activeTab === 'faqs' && (
+          <div className="space-y-4">
+            <div className="p-1">
+              <h2 className="text-xl sm:text-2xl font-black font-display text-[#ECF0F1]">
+                Frequently Asked Questions
+              </h2>
+              <p className="text-xs sm:text-sm text-[#95A5A6]">
+                Common queries regarding participation, tournament logistics, and certificates.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {faqs.map((faq, idx) => {
+                const isOpen = expandedFaq === idx;
+                return (
+                  <div
+                    key={faq.id || idx}
+                    className="rounded-2xl bg-[#2C3E50]/70 border border-[#95A5A6]/20 overflow-hidden transition-all"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedFaq(isOpen ? null : idx)}
+                      className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-3 font-bold text-xs sm:text-sm text-[#ECF0F1] hover:text-white transition-colors"
+                    >
+                      <span className="flex items-center gap-2">
+                        <HelpCircle className="w-4 h-4 text-[#2980B9] shrink-0" />
+                        <span>{faq.question}</span>
+                      </span>
+                      {isOpen ? (
+                        <ChevronUp className="w-4 h-4 text-[#95A5A6] shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-[#95A5A6] shrink-0" />
+                      )}
+                    </button>
+
+                    {isOpen && (
+                      <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-[#95A5A6] leading-relaxed border-t border-[#95A5A6]/10 animate-in fade-in">
+                        {faq.answer}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

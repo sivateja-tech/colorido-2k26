@@ -13,7 +13,8 @@ const {
 } = require('../controllers/eventController');
 const {
   getAllRegistrations,
-  updateRegistrationStatus
+  updateRegistrationStatus,
+  checkInParticipant
 } = require('../controllers/registrationController');
 const {
   getSchedule,
@@ -54,6 +55,7 @@ router.patch('/events/:id/feature', toggleFeatured);
 
 // Registrations Management (Section 53)
 router.get('/registrations', getAllRegistrations);
+router.post('/registrations/check-in', checkInParticipant);
 router.patch('/registrations/:id/status', updateRegistrationStatus);
 
 // Schedule Management (Section 54)
