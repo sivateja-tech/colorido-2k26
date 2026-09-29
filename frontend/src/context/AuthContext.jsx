@@ -192,9 +192,13 @@ export function AuthProvider({ children }) {
       const res = await apiForgotPassword(email);
       return res.data;
     } catch (err) {
+      const errData = err.response?.data;
       return {
         success: false,
-        message: err.response?.data?.message || 'Failed to process password reset request.'
+        notFound: Boolean(errData?.notFound || errData?.userNotFound || err.response?.status === 404),
+        userNotFound: Boolean(errData?.userNotFound || errData?.notFound || err.response?.status === 404),
+        redirectTo: errData?.redirectTo,
+        message: errData?.message || 'Failed to process password reset request.'
       };
     }
   };
