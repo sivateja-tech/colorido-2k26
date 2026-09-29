@@ -272,31 +272,14 @@ export default function EventDetailsPage() {
                 </div>
               </div>
             </div>
-
-            {/* Capacity Meter */}
-            <div className="pt-3 border-t border-dark-border space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-dark-muted">Capacity Status</span>
-                <span className="font-mono font-bold text-brand-purple">
-                  {registeredCount} / {capacity}
-                </span>
+            {/* Registration Status */}
+            {isFull && (
+              <div className="pt-3 border-t border-dark-border">
+                <p className="text-xs font-semibold text-rose-400">
+                  Registration capacity reached. Online entries closed.
+                </p>
               </div>
-              <div className="w-full bg-dark-elevated h-2 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    percentFilled >= 100
-                      ? 'bg-brand-error'
-                      : percentFilled > 80
-                      ? 'bg-brand-warning'
-                      : 'bg-gradient-to-r from-brand-purple to-brand-secondary'
-                  }`}
-                  style={{ width: `${percentFilled}%` }}
-                />
-              </div>
-              <p className="text-[11px] text-dark-muted">
-                {isFull ? 'Capacity reached. Online entries closed.' : `${capacity - registeredCount} slots remaining.`}
-              </p>
-            </div>
+            )}
 
             {/* CTA in Sidebar */}
             <div className="pt-2">

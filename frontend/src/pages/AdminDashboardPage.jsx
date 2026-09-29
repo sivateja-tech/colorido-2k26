@@ -211,7 +211,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="text-3xl font-black font-display text-amber-400">{metrics.capacityPercent || 0}%</div>
           <p className="text-[11px] text-slate-400">
-            Across {metrics.totalCapacity || 0} total festival slots
+            Across {metrics.totalCapacity || 0} total festival capacity
           </p>
         </div>
 
