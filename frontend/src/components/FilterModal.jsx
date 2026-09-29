@@ -16,7 +16,7 @@ export default function FilterModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-dark-900 border border-white/10 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div className="bg-dark-surface border border-dark-border w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <h3 className="text-lg font-bold text-white font-display">Filter Events</h3>
           <button

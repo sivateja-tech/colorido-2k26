@@ -173,23 +173,23 @@ export default function HomePage() {
           {/* Cultural Card */}
           <Link
             to="/events/cultural"
-            className="group relative p-8 rounded-3xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border dark:border-dark-border light:border-light-border hover:border-purple-500/50 transition-all duration-300 shadow-md hover:shadow-xl space-y-4"
+            className="group relative p-8 rounded-3xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border dark:border-dark-border light:border-light-border hover:border-[#E67E22]/50 transition-all duration-300 shadow-md hover:shadow-xl space-y-4"
           >
-            <div className="w-12 h-12 rounded-2xl bg-purple-500/15 text-purple-400 flex items-center justify-center font-bold text-xl">
+            <div className="w-12 h-12 rounded-2xl bg-[#E67E22]/15 text-[#E67E22] flex items-center justify-center font-bold text-xl">
               🎭
             </div>
             <div>
-              <span className="text-xs font-mono font-bold text-purple-400 uppercase tracking-wider">
+              <span className="text-xs font-mono font-bold text-[#E67E22] uppercase tracking-wider">
                 10 Competitions
               </span>
-              <h3 className="text-2xl font-bold font-display text-dark-text dark:text-dark-text light:text-light-text group-hover:text-purple-400 transition-colors">
+              <h3 className="text-2xl font-bold font-display text-dark-text dark:text-dark-text light:text-light-text group-hover:text-[#E67E22] transition-colors">
                 Cultural Expressions
               </h3>
             </div>
             <p className="text-xs sm:text-sm text-dark-text-secondary dark:text-dark-text-secondary light:text-light-text-secondary leading-relaxed">
               Dance, Singing, Solo &amp; Group Bands, Drama, Fashion Show, Photography, Painting, Quiz, and Parliamentary Debates on open-air mainstage.
             </p>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-purple-400 pt-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#E67E22] pt-2">
               <span>View Cultural Events</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
             </div>
@@ -198,23 +198,23 @@ export default function HomePage() {
           {/* Technical Card */}
           <Link
             to="/events/technical"
-            className="group relative p-8 rounded-3xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border dark:border-dark-border light:border-light-border hover:border-blue-500/50 transition-all duration-300 shadow-md hover:shadow-xl space-y-4"
+            className="group relative p-8 rounded-3xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border dark:border-dark-border light:border-light-border hover:border-[#2980B9]/50 transition-all duration-300 shadow-md hover:shadow-xl space-y-4"
           >
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/15 text-blue-400 flex items-center justify-center font-bold text-xl">
+            <div className="w-12 h-12 rounded-2xl bg-[#2980B9]/15 text-[#3498DB] flex items-center justify-center font-bold text-xl">
               ⚡
             </div>
             <div>
-              <span className="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">
+              <span className="text-xs font-mono font-bold text-[#3498DB] uppercase tracking-wider">
                 10 Challenges
               </span>
-              <h3 className="text-2xl font-bold font-display text-dark-text dark:text-dark-text light:text-light-text group-hover:text-blue-400 transition-colors">
+              <h3 className="text-2xl font-bold font-display text-dark-text dark:text-dark-text light:text-light-text group-hover:text-[#3498DB] transition-colors">
                 Technical Arena
               </h3>
             </div>
             <p className="text-xs sm:text-sm text-dark-text-secondary dark:text-dark-text-secondary light:text-light-text-secondary leading-relaxed">
               24H Hackathon, Coding Contest, Debugging Contest, Tech Quiz, Paper Presentation, Project Expo, UI/UX, Web Dev, AI/ML, and Code Relay.
             </p>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-blue-400 pt-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#3498DB] pt-2">
               <span>View Technical Events</span>
               <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
             </div>

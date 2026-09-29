@@ -66,7 +66,7 @@ export default function AdminLayout() {
                 <span className="font-display font-black text-base sm:text-lg text-dark-text dark:text-dark-text light:text-light-text">
                   COLORIDO <span className="text-brand-purple dark:text-brand-accent">2K26</span>
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#E67E22]/15 text-[#E67E22] border border-[#E67E22]/30">
                   ADMIN CONSOLE
                 </span>
               </div>
