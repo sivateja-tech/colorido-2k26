@@ -101,11 +101,15 @@ export default function AdminDashboardPage() {
       setLoading(true);
       setError(null);
       const res = await fetchAdminDashboard();
-      if (res.data.success) {
+      if (res.data?.success) {
         setDashboardData(res.data.data);
+      } else {
+        setError(res.data?.message || 'Unable to retrieve dashboard metrics.');
       }
     } catch (err) {
-      setError('Failed to fetch dashboard metrics.');
+      const raw = err.response?.data?.message || err.message || '';
+      const isTechnical = /prisma|findunique|findmany|column|database|syntax error/i.test(raw);
+      setError(isTechnical ? 'Database synchronization in progress. Please refresh.' : (raw || 'Failed to fetch dashboard metrics.'));
     } finally {
       setLoading(false);
     }
@@ -325,6 +329,35 @@ export default function AdminDashboardPage() {
           <span>Refresh Metrics</span>
         </button>
       </div>
+
+      {/* Error Feedback Banner */}
+      {error && (
+        <div className="flex items-start justify-between gap-3 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs animate-in fade-in">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-rose-200">Dashboard Metrics Notice</p>
+              <p className="text-slate-400 text-[11px] mt-0.5">{error}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => loadDashboard()}
+              className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-bold text-[11px] flex items-center gap-1.5 transition-colors shrink-0"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Retry</span>
+            </button>
+            <button
+              onClick={() => setError(null)}
+              className="text-rose-400 hover:text-rose-200 transition-colors shrink-0 p-1"
+              title="Dismiss notice"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Real-time Registration Toast Banner */}
       {liveNotification && (

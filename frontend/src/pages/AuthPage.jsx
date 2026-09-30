@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-do
 import {
   Lock, Mail, User, Phone, Building, BookOpen,
   Calendar, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle, Shield,
-  GraduationCap, MailCheck, RefreshCw, Check
+  GraduationCap, MailCheck, RefreshCw, Check, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { resendEmailVerification } from '../services/api';
@@ -52,6 +52,12 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(location.state?.error || '');
   const [successMsg, setSuccessMsg] = useState(location.state?.message || '');
+
+  const handleSignUpFieldChange = (field, value) => {
+    setSignUpForm((prev) => ({ ...prev, [field]: value }));
+    if (errorMsg) setErrorMsg('');
+    if (successMsg) setSuccessMsg('');
+  };
 
   // Cooldown countdown timer
   useEffect(() => {
@@ -367,7 +373,15 @@ export default function AuthPage() {
               {errorMsg && (
                 <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold animate-in fade-in">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{errorMsg}</span>
+                  <span className="flex-1 leading-relaxed">{errorMsg}</span>
+                  <button
+                    type="button"
+                    onClick={() => setErrorMsg('')}
+                    className="text-red-400 hover:text-red-200 transition-colors shrink-0 p-0.5 ml-1"
+                    title="Dismiss alert"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               )}
 
@@ -420,7 +434,11 @@ export default function AuthPage() {
                       type="email"
                       required
                       value={signInEmail}
-                      onChange={(e) => setSignInEmail(e.target.value)}
+                      onChange={(e) => {
+                        setSignInEmail(e.target.value);
+                        if (errorMsg) setErrorMsg('');
+                        if (unverifiedEmail) setUnverifiedEmail('');
+                      }}
                       placeholder="name@example.com or admin@colorido2k26.com"
                       className="w-full px-4 py-3 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs sm:text-sm text-[#ECF0F1] placeholder:text-[#95A5A6]/50 focus:outline-none focus:border-[#2980B9]"
                     />
@@ -445,7 +463,10 @@ export default function AuthPage() {
                         type={showSignInPassword ? 'text' : 'password'}
                         required
                         value={signInPassword}
-                        onChange={(e) => setSignInPassword(e.target.value)}
+                        onChange={(e) => {
+                          setSignInPassword(e.target.value);
+                          if (errorMsg) setErrorMsg('');
+                        }}
                         placeholder="Enter your password"
                         className="w-full pl-4 pr-11 py-3 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs sm:text-sm text-[#ECF0F1] placeholder:text-[#95A5A6]/50 focus:outline-none focus:border-[#2980B9]"
                       />
@@ -490,7 +511,7 @@ export default function AuthPage() {
                       type="text"
                       required
                       value={signUpForm.fullName}
-                      onChange={(e) => setSignUpForm({ ...signUpForm, fullName: e.target.value })}
+                      onChange={(e) => handleSignUpFieldChange('fullName', e.target.value)}
                       placeholder="e.g. Venkata Sivateja Kodavatiganti"
                       className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
                     />
@@ -507,7 +528,7 @@ export default function AuthPage() {
                         type="email"
                         required
                         value={signUpForm.email}
-                        onChange={(e) => setSignUpForm({ ...signUpForm, email: e.target.value })}
+                        onChange={(e) => handleSignUpFieldChange('email', e.target.value)}
                         placeholder="name@gmail.com"
                         className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
                       />
@@ -522,7 +543,7 @@ export default function AuthPage() {
                         type="tel"
                         required
                         value={signUpForm.phone}
-                        onChange={(e) => setSignUpForm({ ...signUpForm, phone: e.target.value })}
+                        onChange={(e) => handleSignUpFieldChange('phone', e.target.value)}
                         placeholder="+91 9876543210"
                         className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
                       />
@@ -539,7 +560,7 @@ export default function AuthPage() {
                       type="text"
                       required
                       value={signUpForm.college}
-                      onChange={(e) => setSignUpForm({ ...signUpForm, college: e.target.value })}
+                      onChange={(e) => handleSignUpFieldChange('college', e.target.value)}
                       placeholder="R V R & J C College of Engineering"
                       className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
                     />
@@ -554,7 +575,7 @@ export default function AuthPage() {
                       </label>
                       <select
                         value={signUpForm.course}
-                        onChange={(e) => setSignUpForm({ ...signUpForm, course: e.target.value })}
+                        onChange={(e) => handleSignUpFieldChange('course', e.target.value)}
                         className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
                       >
                         <option value="B.Tech">B.Tech</option>
@@ -577,7 +598,7 @@ export default function AuthPage() {
                       </label>
                       <select
                         value={signUpForm.year}
-                        onChange={(e) => setSignUpForm({ ...signUpForm, year: e.target.value })}
+                        onChange={(e) => handleSignUpFieldChange('year', e.target.value)}
                         className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
                       >
                         <option value="1st Year">1st Year</option>
@@ -599,7 +620,7 @@ export default function AuthPage() {
                       type="text"
                       required
                       value={signUpForm.department}
-                      onChange={(e) => setSignUpForm({ ...signUpForm, department: e.target.value })}
+                      onChange={(e) => handleSignUpFieldChange('department', e.target.value)}
                       placeholder="e.g. Computer Science & Engineering"
                       className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
                     />
@@ -617,7 +638,7 @@ export default function AuthPage() {
                           type={showSignUpPassword ? 'text' : 'password'}
                           required
                           value={signUpForm.password}
-                          onChange={(e) => setSignUpForm({ ...signUpForm, password: e.target.value })}
+                          onChange={(e) => handleSignUpFieldChange('password', e.target.value)}
                           placeholder="Min 6 characters"
                           className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
                         />
@@ -641,7 +662,7 @@ export default function AuthPage() {
                           type={showSignUpConfirmPassword ? 'text' : 'password'}
                           required
                           value={signUpForm.confirmPassword}
-                          onChange={(e) => setSignUpForm({ ...signUpForm, confirmPassword: e.target.value })}
+                          onChange={(e) => handleSignUpFieldChange('confirmPassword', e.target.value)}
                           placeholder="Repeat password"
                           className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
                         />

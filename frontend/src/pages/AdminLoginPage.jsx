@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Shield, Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
+import { Shield, Lock, Mail, AlertCircle, ArrowRight, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminLoginPage() {
@@ -52,9 +52,17 @@ export default function AdminLoginPage() {
 
         <div className="p-8 rounded-3xl bg-dark-800/90 border border-white/10 shadow-2xl backdrop-blur-xl">
           {error && (
-            <div className="mb-6 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-center gap-2.5 text-xs">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-              <span>{error}</span>
+            <div className="mb-6 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-start gap-2.5 text-xs animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+              <span className="flex-1 leading-relaxed">{error}</span>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="text-rose-400 hover:text-rose-200 transition-colors shrink-0 p-0.5"
+                title="Dismiss alert"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           )}
 
@@ -68,7 +76,10 @@ export default function AdminLoginPage() {
                 type="email"
                 required
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={e => {
+                  setEmail(e.target.value);
+                  if (error) setError(null);
+                }}
                 className="w-full px-4 py-3 rounded-2xl bg-dark-900 border border-white/10 text-sm text-white focus:outline-none focus:border-brand-purple"
               />
             </div>
@@ -82,7 +93,10 @@ export default function AdminLoginPage() {
                 type="password"
                 required
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={e => {
+                  setPassword(e.target.value);
+                  if (error) setError(null);
+                }}
                 className="w-full px-4 py-3 rounded-2xl bg-dark-900 border border-white/10 text-sm text-white focus:outline-none focus:border-brand-purple"
               />
             </div>

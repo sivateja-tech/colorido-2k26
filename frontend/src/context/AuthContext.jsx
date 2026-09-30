@@ -12,6 +12,15 @@ import {
 
 const AuthContext = createContext();
 
+const sanitizeAuthMessage = (rawMessage, fallback = 'Operation failed. Please try again.') => {
+  if (!rawMessage || typeof rawMessage !== 'string') return fallback;
+  const isTechnical = /prisma|findunique|findmany|invocation|column|database|relation|syntax error|constraint|foreign key/i.test(rawMessage);
+  if (isTechnical) {
+    return 'A service update is currently in progress. Please refresh the page and try again.';
+  }
+  return rawMessage;
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [admin, setAdmin] = useState(null);
@@ -117,21 +126,28 @@ export function AuthProvider({ children }) {
 
       return {
         success: false,
-        message: res.data?.message || 'Authentication failed.'
+        message: sanitizeAuthMessage(res.data?.message, 'Authentication failed.')
       };
     } catch (err) {
       console.error('Login error:', err);
+      const isConnectionIssue = err.message === 'Network Error' || !err.response;
+      if (isConnectionIssue) {
+        return {
+          success: false,
+          message: 'Cannot connect to COLORIDO festival servers. Please check your internet connection or verify the server status.'
+        };
+      }
       if (err.response?.data?.requiresVerification || err.response?.status === 403) {
         return {
           success: false,
           requiresVerification: true,
           email: err.response?.data?.email || email,
-          message: err.response?.data?.message || 'Your account is not activated yet. Please verify your email before logging in.'
+          message: sanitizeAuthMessage(err.response?.data?.message, 'Your account is not activated yet. Please verify your email before logging in.')
         };
       }
       return {
         success: false,
-        message: err.response?.data?.message || 'Invalid email or password.'
+        message: sanitizeAuthMessage(err.response?.data?.message, 'Invalid email or password.')
       };
     }
   };
@@ -154,10 +170,17 @@ export function AuthProvider({ children }) {
 
       return {
         success: false,
-        message: res.data?.message || 'Registration failed.'
+        message: sanitizeAuthMessage(res.data?.message, 'Registration failed.')
       };
     } catch (err) {
       console.error('Registration error:', err);
+      const isConnectionIssue = err.message === 'Network Error' || !err.response;
+      if (isConnectionIssue) {
+        return {
+          success: false,
+          message: 'Cannot connect to COLORIDO festival servers. Please check your network connection.'
+        };
+      }
       const data = err.response?.data;
       return {
         success: false,
@@ -166,7 +189,7 @@ export function AuthProvider({ children }) {
         rateLimited: data?.rateLimited,
         requiresVerification: data?.requiresVerification,
         email: data?.email || userData.email,
-        message: data?.message || 'Registration failed. Please check your data and retry.'
+        message: sanitizeAuthMessage(data?.message, 'Registration could not be completed. Please verify your details and retry.')
       };
     }
   };
