@@ -1,7 +1,10 @@
-const nodemailer = require('nodemailer');
-const config = require('../config');
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
-let transporter = null;
+let transporter465 = null;
+let transporter587 = null;
 
 const { Resend } = require('resend');
 let resendInstance = null;
@@ -14,105 +17,63 @@ function getResend() {
 }
 
 /**
- * Get or initialize nodemailer transporter with connection timeouts
+ * Primary Nodemailer Transporter: Port 465 (SSL) forced to IPv4
  */
-function getTransporter() {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      service: config.SMTP.SERVICE || 'gmail',
-      host: config.SMTP.HOST || 'smtp.gmail.com',
-      port: config.SMTP.PORT || 465,
-      secure: config.SMTP.SECURE,
-      connectionTimeout: 4000, // 4-second timeout to fail fast if port is blocked by Render
-      greetingTimeout: 4000,
-      socketTimeout: 6000,
+function getTransporter465() {
+  if (!transporter465) {
+    transporter465 = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      family: 4, // Strictly force IPv4 to avoid ENETUNREACH on IPv6
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 8000,
       auth: {
         user: config.SMTP.USER,
         pass: config.SMTP.PASS
       }
     });
   }
-  return transporter;
+  return transporter465;
 }
 
 /**
- * Dispatch email via Brevo REST API (HTTPS Port 443 - 100% unblocked on Render free tier)
+ * Alternate Nodemailer Transporter: Port 587 (STARTTLS) forced to IPv4
  */
-async function sendViaBrevo({ to, subject, html, text }) {
-  if (!config.BREVO_API_KEY) return null;
-
-  const recipients = (Array.isArray(to) ? to : [to]).map(recipient => {
-    if (typeof recipient === 'string') {
-      return { email: recipient.trim() };
-    }
-    return recipient;
-  });
-
-  const senderEmail = config.BREVO_SENDER_EMAIL || config.SMTP?.USER || 'hackerbot2005@gmail.com';
-  const senderName = 'COLORIDO 2K26';
-
-  const payload = {
-    sender: {
-      name: senderName,
-      email: senderEmail
-    },
-    to: recipients,
-    subject,
-    htmlContent: html,
-    textContent: text || ''
-  };
-
-  try {
-    console.log(`[BREVO API ATTEMPT] Sending email to ${recipients.map(r => r.email).join(', ')} from "${senderName} <${senderEmail}>" via Brevo HTTP API (Port 443)...`);
-
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'content-type': 'application/json',
-        'api-key': config.BREVO_API_KEY.trim()
-      },
-      body: JSON.stringify(payload)
+function getTransporter587() {
+  if (!transporter587) {
+    transporter587 = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // Port 587 uses STARTTLS
+      requireTLS: true,
+      family: 4, // Strictly force IPv4
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 8000,
+      auth: {
+        user: config.SMTP.USER,
+        pass: config.SMTP.PASS
+      }
     });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (response.ok && data.messageId) {
-      console.log(`[BREVO API SUCCESS] Delivered email to ${recipients.map(r => r.email).join(', ')} (Message ID: ${data.messageId})`);
-      return { success: true, messageId: data.messageId, provider: 'brevo' };
-    } else {
-      const errorMsg = data.message || data.error || (data.code ? `${data.code}: ${data.message}` : `HTTP ${response.status}: ${response.statusText}`);
-      console.warn(`[BREVO API WARNING] Brevo delivery failed: ${errorMsg}`);
-      return { success: false, error: errorMsg };
-    }
-  } catch (err) {
-    console.error(`[BREVO API EXCEPTION] ${err.message}`);
-    return { success: false, error: err.message };
   }
+  return transporter587;
 }
 
 /**
- * Helper to dispatch email with multi-tier routing (Brevo API -> Gmail SMTP -> Resend API)
+ * Helper to dispatch email via Nodemailer (Port 465 -> Port 587 fallback)
  */
 async function dispatchEmail({ to, subject, html, text }) {
   const recipientList = Array.isArray(to) ? to.join(', ') : to;
   const fromAddress = config.SMTP.FROM || config.EMAIL_FROM || 'COLORIDO 2K26 <hackerbot2005@gmail.com>';
 
-  // Tier 1: Brevo REST API over HTTPS Port 443 (Recommended for Render free tier)
-  let brevoError = null;
-  if (config.BREVO_API_KEY) {
-    const brevoResult = await sendViaBrevo({ to, subject, html, text });
-    if (brevoResult && brevoResult.success) {
-      return brevoResult;
-    }
-    brevoError = brevoResult?.error || 'Brevo API call failed';
-    console.warn(`[BREVO NOTICE] Brevo did not deliver (${brevoError}). Falling back to next available provider...`);
-  }
+  let lastError = null;
 
-  // Tier 2: Gmail SMTP via Nodemailer (Port 465)
+  // Attempt 1: Nodemailer via Port 465 (SSL, IPv4)
   try {
-    const transport = getTransporter();
-    console.log(`[SMTP ATTEMPT] Sending email to ${recipientList} via ${config.SMTP.HOST}:${config.SMTP.PORT}...`);
+    const transport = getTransporter465();
+    console.log(`[NODEMAILER] Sending email to ${recipientList} via smtp.gmail.com:465 (SSL, IPv4)...`);
 
     const info = await transport.sendMail({
       from: fromAddress,
@@ -122,47 +83,59 @@ async function dispatchEmail({ to, subject, html, text }) {
       text
     });
 
-    console.log(`[SMTP SUCCESS] Delivered email to ${recipientList} (Message ID: ${info.messageId})`);
-    return { success: true, messageId: info.messageId, provider: 'smtp' };
-  } catch (smtpErr) {
-    console.warn(`[SMTP BLOCKED/FAILED] ${smtpErr.message}. Checking HTTP API fallback (Port 443)...`);
-
-    // Tier 3: Resend HTTP REST API over Port 443
-    const resend = getResend();
-    if (resend) {
-      try {
-        console.log(`[HTTP API FALLBACK] Attempting delivery via Resend API (HTTPS Port 443) to ${recipientList}...`);
-        const { data, error } = await resend.emails.send({
-          from: 'COLORIDO 2K26 <onboarding@resend.dev>',
-          to: Array.isArray(to) ? to : [to],
-          subject,
-          html,
-          text
-        });
-
-        if (data && data.id) {
-          console.log(`[HTTP API SUCCESS] Delivered via Resend to ${recipientList} (ID: ${data.id})`);
-          return { success: true, messageId: data.id, provider: 'resend' };
-        } else if (error) {
-          console.error(`[HTTP API ERROR] Resend error:`, error);
-        }
-      } catch (resendErr) {
-        console.error(`[HTTP API EXCEPTION] Resend exception:`, resendErr.message);
-      }
-    }
-
-    let errorDetail = '';
-    if (brevoError) {
-      errorDetail = `Brevo API error: ${brevoError}. (Please verify that "${config.BREVO_SENDER_EMAIL}" is added as an authorized Sender in your Brevo account).`;
-    } else {
-      errorDetail = `Delivery failed. SMTP: ${smtpErr.message}. Configure BREVO_API_KEY in Render to bypass port blocks.`;
-    }
-
-    return {
-      success: false,
-      error: errorDetail
-    };
+    console.log(`[NODEMAILER SUCCESS] Delivered to ${recipientList} via Port 465 (Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId, provider: 'nodemailer-465' };
+  } catch (err465) {
+    console.warn(`[NODEMAILER 465 FAILED] ${err465.message}. Retrying via Port 587 (STARTTLS, IPv4)...`);
+    lastError = err465;
   }
+
+  // Attempt 2: Nodemailer via Port 587 (STARTTLS, IPv4)
+  try {
+    const transport = getTransporter587();
+    console.log(`[NODEMAILER] Retrying email to ${recipientList} via smtp.gmail.com:587 (STARTTLS, IPv4)...`);
+
+    const info = await transport.sendMail({
+      from: fromAddress,
+      to: recipientList,
+      subject,
+      html,
+      text
+    });
+
+    console.log(`[NODEMAILER SUCCESS] Delivered to ${recipientList} via Port 587 (Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId, provider: 'nodemailer-587' };
+  } catch (err587) {
+    console.warn(`[NODEMAILER 587 FAILED] ${err587.message}.`);
+    lastError = err587;
+  }
+
+  // Attempt 3: Resend HTTP REST API over Port 443 (if configured)
+  const resend = getResend();
+  if (resend) {
+    try {
+      console.log(`[BACKUP API] Attempting delivery via Resend API (Port 443) to ${recipientList}...`);
+      const { data, error } = await resend.emails.send({
+        from: 'COLORIDO 2K26 <onboarding@resend.dev>',
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        html,
+        text
+      });
+
+      if (data && data.id) {
+        console.log(`[BACKUP API SUCCESS] Delivered via Resend to ${recipientList} (ID: ${data.id})`);
+        return { success: true, messageId: data.id, provider: 'resend' };
+      }
+    } catch (resendErr) {
+      console.error(`[BACKUP API EXCEPTION] ${resendErr.message}`);
+    }
+  }
+
+  return {
+    success: false,
+    error: `Nodemailer failed on both ports 465 and 587 (${lastError ? lastError.message : 'Connection refused'}).`
+  };
 }
 
 /**
