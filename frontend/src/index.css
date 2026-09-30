@@ -149,6 +149,36 @@
   transform-origin: center;
 }
 
+/* =========================================================================
+   EDITORIAL DOODLE DRAW-IN ANIMATIONS
+   Organic, subtle SVG stroke drawing animations for typography & micro-UI
+   ========================================================================= */
+@keyframes doodleDrawStroke {
+  0% {
+    stroke-dashoffset: 280;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.doodle-draw-line {
+  stroke-dasharray: 280;
+  stroke-dashoffset: 0;
+  animation: doodleDrawStroke 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.doodle-draw-circle {
+  stroke-dasharray: 340;
+  stroke-dashoffset: 0;
+  animation: doodleDrawStroke 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.group:hover .doodle-hover-draw,
+.doodle-trigger:hover .doodle-hover-draw {
+  stroke-dasharray: 280;
+  animation: doodleDrawStroke 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {

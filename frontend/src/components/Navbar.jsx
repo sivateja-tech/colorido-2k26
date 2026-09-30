@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, Shield, LogOut, User, Ticket, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { DoodleSparkle } from './doodles/DoodleAccents';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -55,14 +56,15 @@ export default function Navbar() {
               />
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-display font-black text-xl sm:text-2xl tracking-tight text-dark-text dark:text-dark-text light:text-light-text group-hover:text-brand-purple transition-colors">
+                  <span className="font-display font-black text-xl sm:text-2xl tracking-tight text-dark-text dark:text-dark-text light:text-light-text group-hover:text-palette-blue transition-colors relative">
                     COLORIDO
                   </span>
-                  <span className="font-display font-black text-lg sm:text-xl text-brand-purple dark:text-brand-accent light:text-brand-light-primary">
+                  <span className="font-display font-black text-lg sm:text-xl text-[#E67E22] relative inline-flex items-center">
                     2K26
+                    <DoodleSparkle color="#FBBF24" size={13} className="ml-1 -mt-1.5" />
                   </span>
                 </div>
-                <span className="text-[10px] uppercase tracking-wider text-dark-muted dark:text-dark-muted light:text-light-muted font-medium hidden sm:inline-block">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-dark-muted dark:text-dark-muted light:text-light-muted font-medium hidden sm:inline-block">
                   R V R &amp; J C College of Engineering
                 </span>
               </div>

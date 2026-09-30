@@ -72,8 +72,8 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        display: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+        display: ['"Space Grotesk"', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'Fira Code', 'monospace']
       },
       boxShadow: {
         'glow-sm': '0 0 15px rgba(41, 128, 185, 0.2)',

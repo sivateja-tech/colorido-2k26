@@ -11,6 +11,7 @@ import EventVisualCanvas from '../components/EventVisualCanvas';
 import BackButton from '../components/BackButton';
 import { useAuth } from '../context/AuthContext';
 import { getCategoryBadge } from '../utils/helpers';
+import { DoodleUnderline, DoodleSparkle, DoodleArrow } from '../components/doodles/DoodleAccents';
 
 export default function EventDetailsPage() {
   const { id } = useParams();
@@ -211,12 +212,13 @@ export default function EventDetailsPage() {
 
           {/* Badges Overlay */}
           <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex flex-wrap items-center gap-2 z-10">
-            <span className={`px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider border backdrop-blur-md ${categoryBadge.bg}`}>
-              {categoryBadge.label}
+            <span className={`px-3 py-1 rounded-lg text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider border backdrop-blur-md shadow-md ${categoryBadge.bg}`}>
+              <span>[ {categoryBadge.label} ]</span>
             </span>
             {event.featured && (
-              <span className="px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider bg-[#E67E22]/25 text-[#E67E22] border border-[#E67E22]/40 backdrop-blur-md">
-                Featured
+              <span className="px-3 py-1 rounded-lg text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider bg-[#E67E22]/25 text-[#E67E22] border border-[#E67E22]/40 backdrop-blur-md flex items-center gap-1">
+                <DoodleSparkle color="#E67E22" size={12} />
+                <span>FEATURED</span>
               </span>
             )}
           </div>
@@ -226,10 +228,13 @@ export default function EventDetailsPage() {
         <div className="p-4 sm:p-6 lg:p-8 space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="space-y-1 sm:space-y-2">
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black font-display text-[#ECF0F1] tracking-tight">
-                {event.title}
-              </h1>
-              <p className="text-xs sm:text-sm text-[#95A5A6] flex flex-wrap items-center gap-x-2 gap-y-1">
+              <div className="relative inline-block">
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black font-display text-[#ECF0F1] tracking-tight">
+                  {event.title}
+                </h1>
+                <DoodleUnderline color="#2980B9" height="8px" className="mt-1" />
+              </div>
+              <p className="text-xs sm:text-sm font-mono text-[#95A5A6] flex flex-wrap items-center gap-x-2 gap-y-1 pt-1">
                 <span>R V R &amp; J C College of Engineering</span>
                 <span>•</span>
                 <span className="text-[#2980B9] font-bold">{event.category} Championship</span>
@@ -243,30 +248,31 @@ export default function EventDetailsPage() {
               {userRegistration ? (
                 <Link
                   to={`/pass/${userRegistration.registrationId || userRegistration.id}`}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 transition-all"
                 >
                   <Ticket className="w-4 h-4" />
                   <span>View Registration Pass</span>
                 </Link>
               ) : isFull ? (
-                <div className="w-full sm:w-auto px-6 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-[#95A5A6] bg-[#1a252f] border border-[#95A5A6]/20 text-center cursor-not-allowed">
+                <div className="w-full sm:w-auto px-6 py-3.5 rounded-2xl text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-[#95A5A6] bg-[#1a252f] border border-[#95A5A6]/20 text-center cursor-not-allowed">
                   Registration Closed
                 </div>
               ) : isAuthenticated ? (
                 <Link
                   to={`/register?event=${event.id}`}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-lg shadow-[#2980B9]/25 transition-all hover:scale-[1.02]"
+                  className="group w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-lg shadow-[#2980B9]/25 transition-all hover:scale-[1.02]"
                 >
                   <span>Register for Event</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <DoodleArrow color="#FFFFFF" width={18} height={10} className="group-hover:translate-x-1.5 transition-transform" />
                 </Link>
               ) : (
                 <Link
                   to={`/auth?redirect=/events/${event.id}`}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-lg shadow-[#2980B9]/25 transition-all hover:scale-[1.02]"
+                  className="group w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-lg shadow-[#2980B9]/25 transition-all hover:scale-[1.02]"
                 >
                   <LogIn className="w-4 h-4" />
                   <span>Sign In to Register</span>
+                  <DoodleArrow color="#FFFFFF" width={18} height={10} className="group-hover:translate-x-1.5 transition-transform" />
                 </Link>
               )}
             </div>

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Trophy, Users, ArrowRight, Eye, Clock, ShieldCheck } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Users, Eye, Clock } from 'lucide-react';
 import EventVisualCanvas from './EventVisualCanvas';
 import { useCardGlow } from '../hooks/useCardGlow';
 import { getCategoryBadge } from '../utils/helpers';
+import { DoodleUnderline, DoodleSparkle, DoodleArrow } from './doodles/DoodleAccents';
 
 export default function EventCard({ event }) {
   const navigate = useNavigate();
@@ -64,48 +65,47 @@ export default function EventCard({ event }) {
           />
         </div>
 
-        {/* Bottom Vignette Blur Transition (eliminates harsh line into card body) */}
+        {/* Bottom Vignette Blur Transition */}
         <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-dark-surface dark:from-dark-surface light:from-white via-dark-surface/40 dark:via-dark-surface/40 light:via-white/40 to-transparent pointer-events-none z-10" />
 
-        {/* Top Badges: Category & Featured */}
+        {/* Editorial Top Badges: Category & Featured */}
         <div className="absolute top-3.5 left-3.5 flex items-center gap-2 z-20">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-md border shadow-md ${categoryBadge.bg}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${categoryBadge.dot} animate-pulse`} />
-            {categoryBadge.label}
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider backdrop-blur-md border shadow-md ${categoryBadge.bg}`}>
+            <span>[ {categoryBadge.label} ]</span>
           </span>
           {event.featured && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-[#E67E22]/20 text-[#E67E22] border border-[#E67E22]/40 backdrop-blur-md shadow-md">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#E67E22] animate-ping" />
-              Featured
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider bg-[#E67E22]/20 text-[#E67E22] border border-[#E67E22]/40 backdrop-blur-md shadow-md">
+              <DoodleSparkle color="#E67E22" size={11} />
+              <span>FEATURED</span>
             </span>
           )}
         </div>
 
         {/* Format Pill (Solo / Team) on Top Right */}
         <div className="absolute top-3.5 right-3.5 z-20">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-dark-bg/85 dark:bg-dark-bg/85 light:bg-white/90 text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-700 border border-[#95A5A6]/25 dark:border-[#95A5A6]/25 light:border-slate-300 backdrop-blur-md shadow-sm">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-mono font-semibold bg-dark-bg/90 dark:bg-dark-bg/90 light:bg-white/95 text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-700 border border-[#95A5A6]/25 dark:border-[#95A5A6]/25 light:border-slate-300 backdrop-blur-md shadow-sm">
             <Users className="w-3 h-3 text-[#2980B9]" />
             <span>
               {event.participantType === 'TEAM'
-                ? `Team (${event.minTeamSize || 2}-${event.maxTeamSize || 4})`
-                : 'Solo'}
+                ? `TEAM (${event.minTeamSize || 2}-${event.maxTeamSize || 4})`
+                : 'SOLO'}
             </span>
           </span>
         </div>
 
-        {/* Prize Pool Floating Badge */}
+        {/* Prize Pool Floating Badge with Sparkle Accent */}
         {event.prizePool && (
-          <div className="absolute bottom-3 left-3.5 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-bg/95 dark:bg-dark-bg/95 light:bg-white/95 border border-[#E67E22]/40 text-[#E67E22] text-xs font-bold backdrop-blur-md shadow-lg">
+          <div className="absolute bottom-3 left-3.5 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-bg/95 dark:bg-dark-bg/95 light:bg-white/95 border border-[#E67E22]/40 text-[#E67E22] text-xs font-mono font-bold backdrop-blur-md shadow-lg">
             <Trophy className="w-3.5 h-3.5 text-[#E67E22]" />
-            <span>Prize: {event.prizePool}</span>
+            <span>PRIZE: {event.prizePool}</span>
           </div>
         )}
 
         {/* Interactive Hover Hint Overlay Pill */}
         <div className="absolute bottom-3 right-3.5 z-20 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none transform translate-y-1 group-hover:translate-y-0">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#2980B9] text-white shadow-lg backdrop-blur-sm border border-[#3498DB]/40">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold bg-[#2980B9] text-white shadow-lg backdrop-blur-sm border border-[#3498DB]/40">
             <Eye className="w-3.5 h-3.5" />
-            <span>Explore Event</span>
+            <span>EXPLORE</span>
           </span>
         </div>
       </div>
@@ -113,27 +113,34 @@ export default function EventCard({ event }) {
       {/* Card Body & Details */}
       <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between space-y-4">
         <div>
-          <h3 className="text-xl font-bold font-display text-dark-text dark:text-dark-text light:text-slate-900 group-hover:text-palette-blue dark:group-hover:text-palette-blue light:group-hover:text-palette-blue transition-colors line-clamp-1">
-            {event.title}
-          </h3>
-          <p className="mt-2 text-xs sm:text-sm text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-600 line-clamp-2 leading-relaxed">
+          <div className="relative inline-block w-full">
+            <h3 className="text-xl font-bold font-display text-dark-text dark:text-dark-text light:text-slate-900 group-hover:text-palette-blue dark:group-hover:text-palette-blue light:group-hover:text-palette-blue transition-colors line-clamp-1">
+              {event.title}
+            </h3>
+            <DoodleUnderline
+              color="#2980B9"
+              height="6px"
+              className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            />
+          </div>
+          <p className="mt-2 text-xs sm:text-sm text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-600 line-clamp-2 leading-relaxed font-sans">
             {event.shortDescription || event.description}
           </p>
         </div>
 
-        {/* Meta Info */}
-        <div className="space-y-2 text-xs text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-600 border-t border-[#95A5A6]/20 dark:border-[#95A5A6]/15 light:border-slate-200 pt-3">
+        {/* Meta Info with Monospace Typography */}
+        <div className="space-y-2 text-xs font-mono text-dark-text-secondary dark:text-dark-text-secondary light:text-slate-600 border-t border-[#95A5A6]/20 dark:border-[#95A5A6]/15 light:border-slate-200 pt-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-3.5 h-3.5 text-[#2980B9] shrink-0" />
-            <span className="truncate font-medium">{event.date || 'October 16, 2026'}</span>
+            <span className="truncate">{event.date || 'OCTOBER 16, 2026'}</span>
             <span className="text-[#95A5A6]">•</span>
             <Clock className="w-3.5 h-3.5 text-[#2980B9] shrink-0" />
-            <span className="truncate font-medium">{event.startTime || '10:00 AM'}</span>
+            <span className="truncate">{event.startTime || '10:00 AM'}</span>
           </div>
 
           <div className="flex items-center gap-2">
             <MapPin className="w-3.5 h-3.5 text-[#E67E22] shrink-0" />
-            <span className="truncate">{event.venue || 'RVR & JC Campus'}</span>
+            <span className="truncate font-sans">{event.venue || 'RVR & JC Campus'}</span>
           </div>
         </div>
 
@@ -141,14 +148,13 @@ export default function EventCard({ event }) {
         <div className="pt-1">
           <button
             type="button"
-            className="w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#2980B9] to-[#2471A3] hover:from-[#3498DB] hover:to-[#2980B9] shadow-md group-hover:shadow-[0_4px_16px_rgba(41,128,185,0.35)] flex items-center justify-center gap-2 transition-all duration-200"
+            className="w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-white bg-gradient-to-r from-[#2980B9] to-[#2471A3] hover:from-[#3498DB] hover:to-[#2980B9] shadow-md group-hover:shadow-[0_4px_16px_rgba(41,128,185,0.35)] flex items-center justify-center gap-2 transition-all duration-200"
           >
-            <span>View Event Details</span>
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-200" />
+            <span>Inspect Rules &amp; Register</span>
+            <DoodleArrow color="#FFFFFF" width={18} height={10} className="group-hover:translate-x-1.5 transition-transform duration-200" />
           </button>
         </div>
       </div>
     </div>
   );
 }
-

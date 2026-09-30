@@ -9,6 +9,7 @@ import {
   FESTIVAL_PHONE,
   COLLEGE_WEBSITE
 } from '../utils/constants';
+import { DoodleSparkle } from './doodles/DoodleAccents';
 
 export default function Footer() {
   return (
@@ -24,8 +25,12 @@ export default function Footer() {
                 className="w-12 h-12 object-contain bg-dark-surface dark:bg-dark-surface light:bg-slate-100 p-1 rounded-xl border border-dark-border dark:border-dark-border light:border-light-border"
               />
               <div>
-                <h3 className="text-xl font-black font-display text-dark-text dark:text-dark-text light:text-light-text tracking-tight">
-                  COLORIDO <span className="text-brand-purple dark:text-brand-accent light:text-brand-light-primary">2K26</span>
+                <h3 className="text-xl font-black font-display text-dark-text dark:text-dark-text light:text-light-text tracking-tight flex items-center gap-1.5">
+                  <span>COLORIDO</span>
+                  <span className="text-[#E67E22] flex items-center">
+                    2K26
+                    <DoodleSparkle color="#FBBF24" size={13} className="ml-0.5 -mt-1" />
+                  </span>
                 </h3>
                 <p className="text-xs font-semibold text-dark-muted dark:text-dark-muted light:text-light-muted">
                   {COLLEGE_NAME}
