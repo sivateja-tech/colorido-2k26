@@ -22,7 +22,14 @@ function getResendClient() {
 async function dispatchEmail({ to, subject, html, text }) {
   const resend = getResendClient();
   const recipientList = Array.isArray(to) ? to : [to];
-  const fromAddress = config.EMAIL_FROM || 'COLORIDO 2K26 <onboarding@resend.dev>';
+  
+  // Resend requires sender to be onboarding@resend.dev or a verified custom domain.
+  // Public domains like @gmail.com are strictly rejected by Resend API.
+  let fromAddress = config.EMAIL_FROM || 'COLORIDO 2K26 <onboarding@resend.dev>';
+  if (!fromAddress || fromAddress.includes('@gmail.com') || fromAddress.includes('@yahoo.com') || fromAddress.includes('@outlook.com') || fromAddress.includes('@hotmail.com')) {
+    console.warn(`[RESEND NOTICE] "${fromAddress}" is a public webmail domain. Resend requires "onboarding@resend.dev" or your verified custom domain. Using "COLORIDO 2K26 <onboarding@resend.dev>".`);
+    fromAddress = 'COLORIDO 2K26 <onboarding@resend.dev>';
+  }
 
   if (!resend) {
     console.warn(`[EMAIL WARNING] RESEND_API_KEY is not set. Email not sent over network.`);
@@ -31,6 +38,7 @@ async function dispatchEmail({ to, subject, html, text }) {
   }
 
   try {
+    console.log(`[RESEND ATTEMPT] Sending email to ${recipientList.join(', ')} from "${fromAddress}" with subject "${subject}"...`);
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: recipientList,
@@ -40,14 +48,17 @@ async function dispatchEmail({ to, subject, html, text }) {
     });
 
     if (error) {
-      console.error(`[RESEND ERROR] Failed to send email to ${recipientList.join(', ')}:`, error);
+      console.error(`[RESEND ERROR] Failed to send email to ${recipientList.join(', ')}:`, JSON.stringify(error, null, 2));
+      if (error.statusCode === 403 || (error.message && error.message.includes('only send testing emails'))) {
+        console.error(`[RESEND HINT] Resend free testing domain (onboarding@resend.dev) ONLY allows sending to the email you used to register at resend.com. To send to any recipient, verify your domain at resend.com/domains.`);
+      }
       return { success: false, error: error.message || error };
     }
 
     console.log(`[RESEND EMAIL] Successfully sent email to ${recipientList.join(', ')} (ID: ${data.id})`);
     return { success: true, messageId: data.id };
   } catch (err) {
-    console.error(`[RESEND EXCEPTION] Exception sending email to ${recipientList.join(', ')}:`, err.message);
+    console.error(`[RESEND EXCEPTION] Exception sending email to ${recipientList.join(', ')}:`, err);
     return { success: false, error: err.message };
   }
 }
