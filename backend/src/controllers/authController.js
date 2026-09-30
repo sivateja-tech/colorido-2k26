@@ -87,13 +87,11 @@ async function unifiedLogin(req, res, next) {
         });
       }
 
-      // Check if user has verified their email
+      // Auto-activate user upon entering correct password so no student is ever locked out
       if (!user.isVerified) {
-        return res.status(403).json({
-          success: false,
-          requiresVerification: true,
-          email: user.email,
-          message: 'Your account is not activated yet. Please verify your email before logging in.'
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { isVerified: true }
         });
       }
 
@@ -291,7 +289,7 @@ async function registerUser(req, res, next) {
     // Securely hash password with bcrypt
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user account with isVerified: false until email confirmed
+    // Create user account with active status so students can register for events immediately
     const newUser = await prisma.user.create({
       data: {
         email: userEmail,
@@ -302,62 +300,37 @@ async function registerUser(req, res, next) {
         department: userDepartment,
         year: userYear,
         passwordHash,
-        role: 'USER', // Strict invariant: no user can ever register as admin
-        isVerified: false
+        role: 'USER',
+        isVerified: true
       }
     });
 
-    // Generate cryptographic email verification token
-    const rawVerifyToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawVerifyToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-    await prisma.emailVerification.create({
-      data: {
-        email: userEmail,
-        tokenHash,
-        expiresAt,
-        used: false
-      }
-    });
-
-    const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${rawVerifyToken}`;
-    console.log(`\n========================================`);
-    console.log(`[EMAIL VERIFICATION] Activation Link for ${userEmail}:`);
-    console.log(`${verificationUrl}`);
-    console.log(`========================================\n`);
-
-    // Dispatch verification email in background
-    const emailResult = await sendVerificationEmail({
-      to: userEmail,
-      verificationUrl,
-      name: displayName
-    });
-
-    // If Resend blocked because recipient is not the account owner on free sandbox:
-    if (!emailResult.success && (emailResult.error?.includes('testing emails') || emailResult.error?.includes('domain is not verified') || emailResult.error?.includes('only send testing emails'))) {
-      console.warn(`[AUTO-ACTIVATION] Resend sandbox restriction active. Auto-activating new account for ${userEmail}.`);
-      await prisma.user.update({
-        where: { id: newUser.id },
-        data: { isVerified: true }
-      });
-      return res.status(201).json({
-        success: true,
-        requiresVerification: false,
-        autoActivated: true,
-        message: 'Account created and activated successfully! You can sign in immediately.',
+    // Generate User JWT for instant login
+    const token = jwt.sign(
+      {
+        userId: newUser.id,
         email: newUser.email,
-        role: 'USER'
-      });
-    }
+        role: 'USER',
+        type: 'USER'
+      },
+      config.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Dispatch welcome / verification email in background via Resend
+    sendVerificationEmail({
+      to: userEmail,
+      verificationUrl: `${config.FRONTEND_URL}/events`,
+      name: displayName
+    }).catch(err => console.error('[EMAIL DISPATCH ERROR]', err.message));
 
     return res.status(201).json({
       success: true,
-      requiresVerification: true,
-      message: 'Account created successfully! An activation link has been sent to your email. Please verify your email to activate your account.',
-      email: newUser.email,
-      verificationUrl: config.NODE_ENV === 'development' ? verificationUrl : undefined,
+      requiresVerification: false,
+      message: 'Account created successfully! Welcome to COLORIDO 2K26.',
+      token,
       role: 'USER',
+      redirectTo: '/events',
       user: {
         id: newUser.id,
         name: newUser.name,
@@ -368,7 +341,7 @@ async function registerUser(req, res, next) {
         year: newUser.year,
         phone: newUser.phone,
         role: 'USER',
-        isVerified: false
+        isVerified: true
       }
     });
   } catch (err) {
