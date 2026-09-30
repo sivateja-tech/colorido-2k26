@@ -87,11 +87,13 @@ async function unifiedLogin(req, res, next) {
         });
       }
 
-      // Auto-activate user upon entering correct password so no student is ever locked out
+      // Enforce email verification for normal participants
       if (!user.isVerified) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { isVerified: true }
+        return res.status(403).json({
+          success: false,
+          requiresVerification: true,
+          email: user.email,
+          message: 'Your account is not activated yet. Please click the activation link sent to your email before signing in.'
         });
       }
 
@@ -259,23 +261,6 @@ async function registerUser(req, res, next) {
         name: displayName
       });
 
-      // If Resend blocked because recipient is not the account owner on free sandbox:
-      if (!emailResult.success && (emailResult.error?.includes('testing emails') || emailResult.error?.includes('domain is not verified') || emailResult.error?.includes('only send testing emails'))) {
-        console.warn(`[AUTO-ACTIVATION] Resend sandbox restriction active. Auto-activating unverified account for ${userEmail}.`);
-        await prisma.user.update({
-          where: { id: existingUser.id },
-          data: { isVerified: true }
-        });
-        return res.status(200).json({
-          success: true,
-          requiresVerification: false,
-          autoActivated: true,
-          message: 'Account activated successfully! You can sign in immediately.',
-          email: userEmail,
-          role: 'USER'
-        });
-      }
-
       return res.status(200).json({
         success: true,
         requiresVerification: true,
@@ -289,7 +274,7 @@ async function registerUser(req, res, next) {
     // Securely hash password with bcrypt
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user account with active status so students can register for events immediately
+    // Create unverified user account (Email verification required before login)
     const newUser = await prisma.user.create({
       data: {
         email: userEmail,
@@ -301,37 +286,45 @@ async function registerUser(req, res, next) {
         year: userYear,
         passwordHash,
         role: 'USER',
-        isVerified: true
+        isVerified: false
       }
     });
 
-    // Generate User JWT for instant login
-    const token = jwt.sign(
-      {
-        userId: newUser.id,
-        email: newUser.email,
-        role: 'USER',
-        type: 'USER'
-      },
-      config.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    // Invalidate existing tokens & generate fresh activation token
+    await prisma.emailVerification.updateMany({
+      where: { email: userEmail, used: false },
+      data: { used: true }
+    });
 
-    // Dispatch welcome / verification email via Resend
-    const emailResult = await sendVerificationEmail({
+    const rawVerifyToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawVerifyToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.emailVerification.create({
+      data: {
+        email: userEmail,
+        tokenHash,
+        expiresAt,
+        used: false
+      }
+    });
+
+    const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${rawVerifyToken}`;
+    console.log(`[USER REGISTRATION] Verification email sent to ${userEmail}: ${verificationUrl}`);
+
+    await sendVerificationEmail({
       to: userEmail,
-      verificationUrl: `${config.FRONTEND_URL}/events`,
+      verificationUrl,
       name: displayName
     });
-    console.log('[REGISTRATION EMAIL RESEND RESULT]', emailResult);
 
     return res.status(201).json({
       success: true,
-      requiresVerification: false,
-      message: 'Account created successfully! Welcome to COLORIDO 2K26.',
-      token,
+      requiresVerification: true,
+      message: 'Account created successfully! We have sent an activation link to your email. Please verify your email before logging in.',
+      email: userEmail,
+      verificationUrl: config.NODE_ENV === 'development' ? verificationUrl : undefined,
       role: 'USER',
-      redirectTo: '/events',
       user: {
         id: newUser.id,
         name: newUser.name,
@@ -342,7 +335,7 @@ async function registerUser(req, res, next) {
         year: newUser.year,
         phone: newUser.phone,
         role: 'USER',
-        isVerified: true
+        isVerified: false
       }
     });
   } catch (err) {
@@ -474,26 +467,11 @@ async function resendVerificationEmail(req, res, next) {
     console.log(`${verificationUrl}`);
     console.log(`========================================\n`);
 
-    const emailResult = await sendVerificationEmail({
+    await sendVerificationEmail({
       to: normalizedEmail,
       verificationUrl,
-      name: user.name
+      name: user.name || 'Participant'
     });
-
-    // If Resend blocked because recipient is not the account owner on free sandbox:
-    if (!emailResult.success && (emailResult.error?.includes('testing emails') || emailResult.error?.includes('domain is not verified') || emailResult.error?.includes('only send testing emails'))) {
-      console.warn(`[AUTO-ACTIVATION] Resend sandbox restriction active. Auto-activating account for ${normalizedEmail}.`);
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { isVerified: true }
-      });
-      return res.json({
-        success: true,
-        alreadyVerified: true,
-        autoActivated: true,
-        message: 'Your account has been automatically verified and activated! You can now sign in with your password.'
-      });
-    }
 
     return res.json({
       success: true,

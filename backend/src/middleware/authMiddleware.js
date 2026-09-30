@@ -58,6 +58,14 @@ async function requireAuth(req, res, next) {
       });
     }
 
+    if (account.role === 'USER' && account.isVerified === false) {
+      return res.status(403).json({
+        success: false,
+        requiresVerification: true,
+        message: 'Your account is not activated yet. Please verify your email before proceeding.'
+      });
+    }
+
     req.user = account;
     next();
   } catch (err) {
