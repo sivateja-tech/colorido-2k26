@@ -143,25 +143,16 @@ export function AuthProvider({ children }) {
     try {
       const res = await apiRegister(userData);
       if (res.data?.success) {
-        if (res.data.requiresVerification) {
-          return {
-            success: true,
-            requiresVerification: true,
-            email: res.data.email,
-            message: res.data.message,
-            verificationUrl: res.data.verificationUrl,
-            user: res.data.user
-          };
-        }
-
         const { token, role, redirectTo, user: profile } = res.data;
 
-        localStorage.setItem('colorido_token', token);
-        localStorage.setItem('colorido_user_token', token);
-        localStorage.setItem('colorido_user', JSON.stringify(profile));
+        if (token) {
+          localStorage.setItem('colorido_token', token);
+          localStorage.setItem('colorido_user_token', token);
+          localStorage.setItem('colorido_user', JSON.stringify(profile));
 
-        setUser(profile);
-        setAdmin(null);
+          setUser(profile);
+          setAdmin(null);
+        }
 
         return {
           success: true,

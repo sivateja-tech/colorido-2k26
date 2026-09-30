@@ -99,12 +99,7 @@ export default function AuthPage() {
           navigate(redirectTarget || '/events', { replace: true });
         }
       } else {
-        if (res.requiresVerification) {
-          setUnverifiedEmail(res.email || signInEmail);
-          setErrorMsg(res.message || 'Your account is not activated yet. Please verify your email before logging in.');
-        } else {
-          setErrorMsg(res.message || 'Invalid email or password.');
-        }
+        setErrorMsg(res.message || 'Invalid email or password.');
       }
     } catch (err) {
       setErrorMsg('A connection error occurred. Please try again.');
@@ -135,15 +130,7 @@ export default function AuthPage() {
     try {
       const res = await register(signUpForm);
       if (res.success) {
-        if (res.requiresVerification) {
-          // Flow: Create Account → Verify Email → Account Activated → Login
-          setVerificationPending({
-            email: res.email || signUpForm.email,
-            verificationUrl: res.verificationUrl
-          });
-        } else {
-          navigate(redirectTarget || '/events', { replace: true });
-        }
+        navigate(redirectTarget || '/events', { replace: true });
       } else {
         setErrorMsg(res.message || 'Registration failed.');
       }

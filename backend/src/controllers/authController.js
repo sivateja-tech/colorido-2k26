@@ -87,16 +87,6 @@ async function unifiedLogin(req, res, next) {
         });
       }
 
-      // Enforce email verification for normal participants
-      if (!user.isVerified) {
-        return res.status(403).json({
-          success: false,
-          requiresVerification: true,
-          email: user.email,
-          message: 'Your account is not activated yet. Please click the activation link sent to your email before signing in.'
-        });
-      }
-
       // Generate User JWT
       const token = jwt.sign(
         {
@@ -211,70 +201,16 @@ async function registerUser(req, res, next) {
     }
 
     if (existingUser) {
-      if (existingUser.isVerified) {
-        return res.status(400).json({
-          success: false,
-          message: 'An account with this email already exists and is active. Please sign in instead.'
-        });
-      }
-
-      // Existing unverified account: update credentials and profile
-      console.log(`[USER REGISTRATION] Re-registering unverified account: ${userEmail}`);
-      const passwordHash = await bcrypt.hash(password, 10);
-      await prisma.user.update({
-        where: { id: existingUser.id },
-        data: {
-          name: displayName,
-          passwordHash,
-          phone: userPhone,
-          college: userCollege,
-          course: userCourse,
-          department: userDepartment,
-          year: userYear
-        }
-      });
-
-      // Invalidate existing tokens & generate fresh token
-      await prisma.emailVerification.updateMany({
-        where: { email: userEmail, used: false },
-        data: { used: true }
-      });
-
-      const rawVerifyToken = crypto.randomBytes(32).toString('hex');
-      const tokenHash = crypto.createHash('sha256').update(rawVerifyToken).digest('hex');
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-      await prisma.emailVerification.create({
-        data: {
-          email: userEmail,
-          tokenHash,
-          expiresAt,
-          used: false
-        }
-      });
-
-      const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${rawVerifyToken}`;
-
-      const emailResult = await sendVerificationEmail({
-        to: userEmail,
-        verificationUrl,
-        name: displayName
-      });
-
-      return res.status(200).json({
-        success: true,
-        requiresVerification: true,
-        message: 'Account details updated! A fresh activation link has been sent to your email. Please verify to activate your account.',
-        email: userEmail,
-        verificationUrl: config.NODE_ENV === 'development' ? verificationUrl : undefined,
-        role: 'USER'
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email already exists. Please sign in instead.'
       });
     }
 
     // Securely hash password with bcrypt
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create unverified user account (Email verification required before login)
+    // Create user account with active status
     const newUser = await prisma.user.create({
       data: {
         email: userEmail,
@@ -286,45 +222,28 @@ async function registerUser(req, res, next) {
         year: userYear,
         passwordHash,
         role: 'USER',
-        isVerified: false
+        isVerified: true
       }
     });
 
-    // Invalidate existing tokens & generate fresh activation token
-    await prisma.emailVerification.updateMany({
-      where: { email: userEmail, used: false },
-      data: { used: true }
-    });
-
-    const rawVerifyToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawVerifyToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    await prisma.emailVerification.create({
-      data: {
-        email: userEmail,
-        tokenHash,
-        expiresAt,
-        used: false
-      }
-    });
-
-    const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${rawVerifyToken}`;
-    console.log(`[USER REGISTRATION] Verification email sent to ${userEmail}: ${verificationUrl}`);
-
-    await sendVerificationEmail({
-      to: userEmail,
-      verificationUrl,
-      name: displayName
-    });
+    // Generate User JWT session token immediately
+    const token = jwt.sign(
+      {
+        userId: newUser.id,
+        email: newUser.email,
+        role: 'USER',
+        type: 'USER'
+      },
+      config.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
     return res.status(201).json({
       success: true,
-      requiresVerification: true,
-      message: 'Account created successfully! We have sent an activation link to your email. Please verify your email before logging in.',
-      email: userEmail,
-      verificationUrl: config.NODE_ENV === 'development' ? verificationUrl : undefined,
+      message: 'Account created successfully! Welcome to COLORIDO 2K26.',
+      token,
       role: 'USER',
+      redirectTo: '/events',
       user: {
         id: newUser.id,
         name: newUser.name,
@@ -335,7 +254,7 @@ async function registerUser(req, res, next) {
         year: newUser.year,
         phone: newUser.phone,
         role: 'USER',
-        isVerified: false
+        isVerified: true
       }
     });
   } catch (err) {
