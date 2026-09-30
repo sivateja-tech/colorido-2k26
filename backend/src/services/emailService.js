@@ -8,7 +8,8 @@ let resendClient = null;
  */
 function getResendClient() {
   if (!resendClient) {
-    const apiKey = config.RESEND_API_KEY || process.env.RESEND_API_KEY;
+    const rawKey = config.RESEND_API_KEY || process.env.RESEND_API_KEY;
+    const apiKey = (typeof rawKey === 'string') ? rawKey.trim() : '';
     if (apiKey) {
       resendClient = new Resend(apiKey);
     }

@@ -317,12 +317,13 @@ async function registerUser(req, res, next) {
       { expiresIn: '7d' }
     );
 
-    // Dispatch welcome / verification email in background via Resend
-    sendVerificationEmail({
+    // Dispatch welcome / verification email via Resend
+    const emailResult = await sendVerificationEmail({
       to: userEmail,
       verificationUrl: `${config.FRONTEND_URL}/events`,
       name: displayName
-    }).catch(err => console.error('[EMAIL DISPATCH ERROR]', err.message));
+    });
+    console.log('[REGISTRATION EMAIL RESEND RESULT]', emailResult);
 
     return res.status(201).json({
       success: true,
@@ -571,14 +572,13 @@ async function forgotPassword(req, res, next) {
     const targetName = admin?.name || user?.name || 'Participant';
     const resetPath = `/reset-password?token=${rawToken}`;
 
-    // Dispatch real email via Gmail SMTP
-    sendPasswordResetEmail({
+    // Dispatch email via Resend
+    const emailResult = await sendPasswordResetEmail({
       to: normalizedEmail,
       resetUrl: resetPath,
       name: targetName
-    }).catch((emailErr) => {
-      console.error('[EMAIL ERROR] Failed to dispatch password reset email:', emailErr.message);
     });
+    console.log('[PASSWORD RESET RESEND RESULT]', emailResult);
 
     console.log(`\n========================================`);
     console.log(`[PASSWORD RESET] Link generated for ${normalizedEmail}:`);
