@@ -48,7 +48,7 @@ async function sendViaBrevo({ to, subject, html, text }) {
     return recipient;
   });
 
-  const senderEmail = config.SMTP?.USER || 'hackerbot2005@gmail.com';
+  const senderEmail = config.BREVO_SENDER_EMAIL || config.SMTP?.USER || 'hackerbot2005@gmail.com';
   const senderName = 'COLORIDO 2K26';
 
   const payload = {
@@ -63,7 +63,7 @@ async function sendViaBrevo({ to, subject, html, text }) {
   };
 
   try {
-    console.log(`[BREVO API ATTEMPT] Sending email to ${recipients.map(r => r.email).join(', ')} via Brevo HTTP API (Port 443)...`);
+    console.log(`[BREVO API ATTEMPT] Sending email to ${recipients.map(r => r.email).join(', ')} from "${senderName} <${senderEmail}>" via Brevo HTTP API (Port 443)...`);
 
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
@@ -81,7 +81,7 @@ async function sendViaBrevo({ to, subject, html, text }) {
       console.log(`[BREVO API SUCCESS] Delivered email to ${recipients.map(r => r.email).join(', ')} (Message ID: ${data.messageId})`);
       return { success: true, messageId: data.messageId, provider: 'brevo' };
     } else {
-      const errorMsg = data.message || data.error || `HTTP ${response.status}: ${response.statusText}`;
+      const errorMsg = data.message || data.error || (data.code ? `${data.code}: ${data.message}` : `HTTP ${response.status}: ${response.statusText}`);
       console.warn(`[BREVO API WARNING] Brevo delivery failed: ${errorMsg}`);
       return { success: false, error: errorMsg };
     }
@@ -99,12 +99,14 @@ async function dispatchEmail({ to, subject, html, text }) {
   const fromAddress = config.SMTP.FROM || config.EMAIL_FROM || 'COLORIDO 2K26 <hackerbot2005@gmail.com>';
 
   // Tier 1: Brevo REST API over HTTPS Port 443 (Recommended for Render free tier)
+  let brevoError = null;
   if (config.BREVO_API_KEY) {
     const brevoResult = await sendViaBrevo({ to, subject, html, text });
     if (brevoResult && brevoResult.success) {
       return brevoResult;
     }
-    console.warn(`[BREVO NOTICE] Brevo did not deliver. Falling back to next available provider...`);
+    brevoError = brevoResult?.error || 'Brevo API call failed';
+    console.warn(`[BREVO NOTICE] Brevo did not deliver (${brevoError}). Falling back to next available provider...`);
   }
 
   // Tier 2: Gmail SMTP via Nodemailer (Port 465)
@@ -149,9 +151,16 @@ async function dispatchEmail({ to, subject, html, text }) {
       }
     }
 
+    let errorDetail = '';
+    if (brevoError) {
+      errorDetail = `Brevo API error: ${brevoError}. (Please verify that "${config.BREVO_SENDER_EMAIL}" is added as an authorized Sender in your Brevo account).`;
+    } else {
+      errorDetail = `Delivery failed. SMTP: ${smtpErr.message}. Configure BREVO_API_KEY in Render to bypass port blocks.`;
+    }
+
     return {
       success: false,
-      error: `Delivery failed. SMTP: ${smtpErr.message}. Configure BREVO_API_KEY in Render to bypass port blocks.`
+      error: errorDetail
     };
   }
 }
