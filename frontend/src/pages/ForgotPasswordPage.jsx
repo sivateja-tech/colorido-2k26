@@ -18,7 +18,9 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !email.includes('@')) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
       setErrorMsg('Please enter a valid email address.');
       return;
     }
@@ -29,23 +31,26 @@ export default function ForgotPasswordPage() {
     setRedirecting(false);
 
     try {
-      const res = await forgotPassword(email);
+      const res = await forgotPassword(cleanEmail);
 
       if (res.success) {
         setSubmitted(true);
-        if (res.data?.resetUrl) {
-          setDevResetUrl(res.data.resetUrl);
+        const resetLink = res.resetUrl || res.data?.resetUrl || res.data?.data?.resetUrl;
+        if (resetLink) {
+          setDevResetUrl(resetLink);
         }
+      } else if (res.rateLimited) {
+        setErrorMsg(res.message || 'Please wait a moment before requesting another reset link.');
       } else if (res.notFound || res.userNotFound) {
         // CASE: Email does not exist in DB -> redirect to Create Account
         setErrorMsg('No account found with this email address. Redirecting to Create Account...');
         setRedirecting(true);
 
         setTimeout(() => {
-          navigate(`/auth?mode=signup&email=${encodeURIComponent(email)}`, {
+          navigate(`/auth?mode=signup&email=${encodeURIComponent(cleanEmail)}`, {
             state: {
               error: 'No account found with this email. Please register to create your account.',
-              email,
+              email: cleanEmail,
               mode: 'signup'
             }
           });
@@ -54,7 +59,7 @@ export default function ForgotPasswordPage() {
         setErrorMsg(res.message || 'Unable to process reset request. Please try again.');
       }
     } catch (err) {
-      setErrorMsg('A connection error occurred. Please try again.');
+      setErrorMsg(err.message || 'A network error occurred. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -111,9 +116,19 @@ export default function ForgotPasswordPage() {
         {/* Card */}
         <div className="p-6 sm:p-8 rounded-3xl bg-dark-surface border border-dark-border shadow-2xl space-y-5">
           {errorMsg && !redirecting && (
-            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-brand-error/15 border border-brand-error/30 text-brand-error text-xs font-semibold">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
+            <div className="flex items-start justify-between gap-2.5 p-3.5 rounded-xl bg-brand-error/15 border border-brand-error/30 text-brand-error text-xs font-semibold animate-in fade-in">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{errorMsg}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMsg('')}
+                className="text-brand-error/70 hover:text-brand-error text-xs font-bold px-1 shrink-0"
+                title="Dismiss"
+              >
+                ✕
+              </button>
             </div>
           )}
 
@@ -244,7 +259,10 @@ export default function ForgotPasswordPage() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errorMsg) setErrorMsg('');
+                  }}
                   placeholder="name@example.com or admin@colorido2k26.com"
                   className="w-full px-4 py-3 rounded-2xl bg-dark-elevated border border-dark-border text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#2980B9]"
                 />

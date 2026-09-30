@@ -180,12 +180,15 @@ export function AuthProvider({ children }) {
       return res.data;
     } catch (err) {
       const errData = err.response?.data;
+      const isUserNotFound = Boolean(errData?.notFound || errData?.userNotFound);
       let errorMsg = 'Failed to process password reset request.';
 
       if (err.message === 'Network Error' || !err.response) {
         errorMsg = 'Cannot connect to COLORIDO festival servers. Please check your internet connection or verify the backend server is running.';
       } else if (typeof errData === 'string' && (errData.includes('ECONNREFUSED') || errData.includes('proxy error'))) {
         errorMsg = 'Backend server is offline (Port 5000 not reachable). Please start the backend service.';
+      } else if (err.response?.status === 404 && !isUserNotFound) {
+        errorMsg = 'Festival API endpoint was not found (404). Please ensure the backend service is running and accessible.';
       } else if (typeof errData === 'string' && errData.includes('<!DOCTYPE')) {
         errorMsg = 'Festival API server error. The server returned an HTML error response.';
       } else if (errData?.message) {
@@ -198,8 +201,8 @@ export function AuthProvider({ children }) {
 
       return {
         success: false,
-        notFound: Boolean(errData?.notFound || errData?.userNotFound || err.response?.status === 404),
-        userNotFound: Boolean(errData?.userNotFound || errData?.notFound || err.response?.status === 404),
+        notFound: isUserNotFound,
+        userNotFound: isUserNotFound,
         rateLimited: Boolean(errData?.rateLimited || err.response?.status === 429),
         retryAfter: errData?.retryAfter,
         redirectTo: errData?.redirectTo,
