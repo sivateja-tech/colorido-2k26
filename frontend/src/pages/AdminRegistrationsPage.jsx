@@ -26,6 +26,7 @@ export default function AdminRegistrationsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [eventFilter, setEventFilter] = useState('ALL');
+  const [typeFilter, setTypeFilter] = useState('ALL');
 
   // Detail Modal
   const [selectedReg, setSelectedReg] = useState(null);
@@ -47,6 +48,7 @@ export default function AdminRegistrationsPage() {
           search: search || undefined,
           status: statusFilter !== 'ALL' ? statusFilter : undefined,
           eventId: eventFilter !== 'ALL' ? eventFilter : undefined,
+          participantType: typeFilter !== 'ALL' ? typeFilter : undefined,
           limit: 100,
         }),
         adminFetchEvents()
@@ -67,7 +69,7 @@ export default function AdminRegistrationsPage() {
 
   useEffect(() => {
     loadData();
-  }, [statusFilter, eventFilter]);
+  }, [statusFilter, eventFilter, typeFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -417,13 +419,35 @@ export default function AdminRegistrationsPage() {
               </div>
             </div>
 
-            {/* Team details if present */}
-            {checkInVerifiedReg.teamName && (
-              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                <span className="text-[11px] text-palette-clouds/60 block">Team:</span>
-                <span className="text-xs font-bold text-palette-blue">
-                  {checkInVerifiedReg.teamName}
-                </span>
+            {/* Team & Squad Details */}
+            {(checkInVerifiedReg.teamName || checkInVerifiedReg.participants?.length > 0) && (
+              <div className="p-3 rounded-lg bg-white/5 border border-white/10 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-palette-clouds/60">
+                    {checkInVerifiedReg.teamName ? `Team: ${checkInVerifiedReg.teamName}` : 'Squad Members'}:
+                  </span>
+                  <span className="text-[10px] text-palette-orange font-bold uppercase">
+                    {checkInVerifiedReg.participantType || 'TEAM'}
+                  </span>
+                </div>
+                {Array.isArray(checkInVerifiedReg.participants) && checkInVerifiedReg.participants.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {checkInVerifiedReg.participants.map((p, idx) => (
+                      <span
+                        key={p.id || idx}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                          p.isCaptain
+                            ? 'bg-palette-orange/20 text-palette-orange border-palette-orange/40'
+                            : 'bg-white/10 text-white border-white/15'
+                        }`}
+                      >
+                        {p.isCaptain ? `👑 ${p.name} (Captain)` : `${idx + 1}. ${p.name}`}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs font-bold text-palette-blue">{checkInVerifiedReg.teamName}</span>
+                )}
               </div>
             )}
 
@@ -475,15 +499,15 @@ export default function AdminRegistrationsPage() {
       )}
 
       {/* Filter and Search Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-dark-surface dark:bg-dark-surface light:bg-light-surface p-4 rounded-2xl border border-dark-border dark:border-dark-border light:border-light-border">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 bg-dark-surface dark:bg-dark-surface light:bg-light-surface p-4 rounded-2xl border border-dark-border dark:border-dark-border light:border-light-border">
         {/* Search */}
-        <form onSubmit={handleSearchSubmit} className="md:col-span-2 relative">
+        <form onSubmit={handleSearchSubmit} className="sm:col-span-2 md:col-span-2 relative">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-muted" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by participant name, reg ID, email, college..."
+            placeholder="Search participant, captain, reg ID, team..."
             className="w-full pl-10 pr-20 py-2 rounded-xl text-xs bg-dark-bg dark:bg-dark-bg light:bg-light-bg border border-dark-border dark:border-dark-border light:border-light-border text-dark-text dark:text-dark-text light:text-light-text placeholder:text-dark-muted focus:outline-none focus:border-palette-blue"
           />
           <button
@@ -507,6 +531,20 @@ export default function AdminRegistrationsPage() {
                 {ev.title} ({ev.category})
               </option>
             ))}
+          </select>
+        </div>
+
+        {/* Filter by Type */}
+        <div>
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl text-xs bg-dark-bg dark:bg-dark-bg light:bg-light-bg border border-dark-border dark:border-dark-border light:border-light-border text-dark-text dark:text-dark-text light:text-light-text focus:outline-none focus:border-palette-blue"
+          >
+            <option value="ALL">All Formats (Solo &amp; Team)</option>
+            <option value="INDIVIDUAL">INDIVIDUAL</option>
+            <option value="GROUP">GROUP</option>
+            <option value="TEAM">TEAM</option>
           </select>
         </div>
 
@@ -839,15 +877,42 @@ export default function AdminRegistrationsPage() {
                 )}
               </div>
 
-              {/* Team Information if Team Event */}
-              {selectedReg.teamName && (
+              {/* Team Information & Registered Participants */}
+              {(selectedReg.participants?.length > 0 || selectedReg.teamName) && (
                 <div className="p-4 rounded-xl border border-dark-border space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="font-bold text-dark-text-secondary uppercase tracking-wider text-[11px]">
-                      Team Name: {selectedReg.teamName}
+                      {selectedReg.teamName ? `Team Roster: ${selectedReg.teamName}` : 'Registered Participants'}
                     </h4>
+                    <span className="text-[10px] text-dark-muted font-bold">
+                      Format: {selectedReg.participantType || 'INDIVIDUAL'}
+                    </span>
                   </div>
-                  {Array.isArray(selectedReg.teamMembers) && selectedReg.teamMembers.length > 0 ? (
+
+                  {Array.isArray(selectedReg.participants) && selectedReg.participants.length > 0 ? (
+                    <div className="space-y-2">
+                      {selectedReg.participants.map((member, idx) => (
+                        <div
+                          key={member.id || idx}
+                          className="p-2.5 rounded-lg bg-dark-bg border border-dark-border grid grid-cols-2 gap-1 text-[11px]"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-dark-text">{member.name}</span>
+                            {member.isCaptain ? (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-palette-orange/20 text-palette-orange border border-palette-orange/30">
+                                CAPTAIN
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-dark-muted font-mono">#{idx + 1}</span>
+                            )}
+                          </div>
+                          <div className="text-dark-muted truncate font-mono">{member.email || 'No email provided'}</div>
+                          <div className="text-dark-muted font-mono">{member.phone || 'No phone'}</div>
+                          <div className="text-dark-muted truncate">{member.college || selectedReg.college}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : Array.isArray(selectedReg.teamMembers) && selectedReg.teamMembers.length > 0 ? (
                     <div className="space-y-2">
                       {selectedReg.teamMembers.map((member, idx) => (
                         <div
@@ -856,31 +921,33 @@ export default function AdminRegistrationsPage() {
                         >
                           <div>
                             <span className="text-dark-muted">Member #{idx + 2}: </span>
-                            <span className="font-bold text-dark-text">{member.name}</span>
+                            <span className="font-bold text-dark-text">{typeof member === 'string' ? member : member.name}</span>
                           </div>
-                          <div>
-                            <span className="text-dark-muted">Roll: </span>
-                            <span className="font-mono text-dark-text">{member.rollNumber || member.roll || 'N/A'}</span>
-                          </div>
-                          <div className="text-dark-muted truncate">{member.email}</div>
-                          <div className="text-dark-muted">{member.phone}</div>
+                          <div className="text-dark-muted truncate">{member.email || ''}</div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-dark-muted italic">No additional team members listed.</p>
+                    <p className="text-dark-muted italic">Individual participant registration.</p>
                   )}
                 </div>
               )}
 
-              {/* Pass ID and Verification Link */}
+              {/* Pass ID, Verification Code, and Pass Link */}
               <div className="p-4 rounded-xl bg-palette-blue/10 border border-palette-blue/30 flex items-center justify-between">
                 <div>
                   <div className="text-[10px] uppercase font-bold text-palette-blue">
-                    Festival Pass ID
+                    Registration ID &amp; Verification Code
                   </div>
-                  <div className="font-mono text-xs font-bold text-dark-text">
-                    {selectedReg.registrationId || selectedReg.registrationNo}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="font-mono text-sm font-bold text-dark-text">
+                      {selectedReg.registrationId || selectedReg.registrationNo}
+                    </span>
+                    {selectedReg.verificationCode && (
+                      <span className="px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-palette-orange/20 text-palette-orange border border-palette-orange/30">
+                        Code: {selectedReg.verificationCode}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <a

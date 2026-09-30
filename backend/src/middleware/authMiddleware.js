@@ -58,6 +58,16 @@ async function requireAuth(req, res, next) {
       });
     }
 
+    if (!req.admin && account.isVerified === false) {
+      return res.status(403).json({
+        success: false,
+        unverified: true,
+        requiresVerification: true,
+        email: account.email,
+        message: 'Your email address is not verified. Please verify your email before accessing this feature.'
+      });
+    }
+
     req.user = account;
     next();
   } catch (err) {

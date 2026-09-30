@@ -7,8 +7,8 @@ const {
 } = require('../controllers/registrationController');
 const { requireAuth, optionalAuth } = require('../middleware/authMiddleware');
 
-// Normal user: Create registration (can be authenticated)
-router.post('/', optionalAuth, createRegistration);
+// Normal user: Create registration (strictly requires auth)
+router.post('/', requireAuth, createRegistration);
 
 // Normal user: View ONLY own registrations (strictly requires auth)
 router.get('/', requireAuth, getUserRegistrations);

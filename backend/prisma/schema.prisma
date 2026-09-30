@@ -87,6 +87,10 @@ model Event {
   participantType  String            @default("INDIVIDUAL") // INDIVIDUAL or TEAM
   minTeamSize      Int               @default(1)
   maxTeamSize      Int               @default(1)
+  registrationType String            @default("INDIVIDUAL") // INDIVIDUAL, GROUP, TEAM
+  isTeamNameRequired Boolean         @default(false)
+  isCaptainRequired  Boolean         @default(true)
+  areMemberEmailsRequired Boolean    @default(false)
   featured         Boolean           @default(false)
   published        Boolean           @default(true)
   imageUrl         String?
@@ -105,32 +109,52 @@ model Event {
 }
 
 model Registration {
-  id              String    @id @default(cuid())
-  registrationId  String    @unique // e.g. COL26-V8R2J
-  userId          String?
-  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  eventId         String
-  event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  fullName        String
-  email           String
-  phone           String
-  college         String
-  department      String
-  year            String
-  participantType String    @default("INDIVIDUAL")
-  teamName        String?
-  teamMembers     String?   @db.Text
-  status          String    @default("CONFIRMED") // PENDING, CONFIRMED, REJECTED, CANCELLED, CHECKED_IN
-  checkedIn       Boolean   @default(false)
-  checkedInAt     DateTime?
-  qrData          String    @db.Text
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String                    @id @default(cuid())
+  registrationId   String                    @unique // e.g. COL26-V8R2J
+  verificationCode String?                   // 6-digit numeric verification code e.g. 849201
+  userId           String?
+  user             User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  eventId          String
+  event            Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  fullName         String
+  email            String
+  phone            String
+  college          String
+  department       String
+  year             String
+  participantType  String                    @default("INDIVIDUAL") // INDIVIDUAL, GROUP, TEAM
+  teamName         String?
+  teamMembers      String?                   @db.Text
+  participants     RegistrationParticipant[]
+  status           String                    @default("CONFIRMED") // PENDING, CONFIRMED, REJECTED, CANCELLED, CHECKED_IN
+  checkedIn        Boolean                   @default(false)
+  checkedInAt      DateTime?
+  qrData           String?                   @db.Text
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
 
-  @@unique([eventId, email])
   @@index([userId])
   @@index([eventId])
   @@index([registrationId])
+  @@index([email])
+  @@index([teamName])
+}
+
+model RegistrationParticipant {
+  id             String       @id @default(cuid())
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  name           String
+  email          String?
+  phone          String?
+  college        String?
+  isCaptain      Boolean      @default(false)
+  order          Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([registrationId])
+  @@index([email])
 }
 
 model EventRound {

@@ -87,6 +87,17 @@ async function unifiedLogin(req, res, next) {
         });
       }
 
+      // Check Email Verification status
+      if (user.isVerified === false) {
+        return res.status(403).json({
+          success: false,
+          unverified: true,
+          requiresVerification: true,
+          email: user.email,
+          message: 'Your email address is not verified yet. Please check your inbox or click Resend Verification to activate your account.'
+        });
+      }
+
       // Generate User JWT
       const token = jwt.sign(
         {
@@ -113,7 +124,8 @@ async function unifiedLogin(req, res, next) {
           department: user.department,
           year: user.year,
           phone: user.phone,
-          role: 'USER'
+          role: 'USER',
+          isVerified: true
         }
       });
     }
@@ -132,8 +144,8 @@ async function unifiedLogin(req, res, next) {
  * USER REGISTRATION (Section: AUTHENTICATION — FINAL DESIGN)
  * Public registration for normal participants.
  * Fields: Full Name, Email, Phone, College, Department, Year, Password, Confirm Password.
- * Automatically and strictly sets role = 'USER'.
- * Never accepts client-defined roles.
+ * Automatically and strictly sets role = 'USER' and isVerified = false.
+ * Dispatches verification email with secure single-use token.
  */
 async function registerUser(req, res, next) {
   try {
@@ -201,16 +213,73 @@ async function registerUser(req, res, next) {
     }
 
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'An account with this email already exists. Please sign in instead.'
-      });
+      if (existingUser.isVerified) {
+        return res.status(400).json({
+          success: false,
+          alreadyExists: true,
+          isVerified: true,
+          message: 'An account with this email already exists and is verified. Please sign in instead.'
+        });
+      } else {
+        // Account exists but is unverified: rate-limit and allow resending verification
+        const recentToken = await prisma.emailVerification.findFirst({
+          where: { email: userEmail },
+          orderBy: { createdAt: 'desc' }
+        });
+        if (recentToken) {
+          const elapsedSec = (Date.now() - new Date(recentToken.createdAt).getTime()) / 1000;
+          if (elapsedSec < 60) {
+            const waitTime = Math.ceil(60 - elapsedSec);
+            return res.status(429).json({
+              success: false,
+              rateLimited: true,
+              retryAfter: waitTime,
+              message: `An unverified account with this email already exists. A verification email was recently dispatched. Please wait ${waitTime} seconds before requesting another.`
+            });
+          }
+        }
+
+        // Invalidate older tokens
+        await prisma.emailVerification.updateMany({
+          where: { email: userEmail, used: false },
+          data: { used: true }
+        });
+
+        // Issue fresh token
+        const rawVerifyToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawVerifyToken).digest('hex');
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+        await prisma.emailVerification.create({
+          data: {
+            email: userEmail,
+            tokenHash,
+            expiresAt,
+            used: false
+          }
+        });
+
+        const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${rawVerifyToken}`;
+        await sendVerificationEmail({
+          to: userEmail,
+          verificationUrl,
+          name: existingUser.name || displayName
+        });
+
+        return res.status(200).json({
+          success: true,
+          unverified: true,
+          requiresVerification: true,
+          email: userEmail,
+          message: 'An unverified account with this email already exists. A fresh activation link has been sent to your email.'
+        });
+      }
     }
 
     // Securely hash password with bcrypt
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user account with active status
+    // Create user account with unverified status (isVerified: false)
     const newUser = await prisma.user.create({
       data: {
         email: userEmail,
@@ -222,40 +291,47 @@ async function registerUser(req, res, next) {
         year: userYear,
         passwordHash,
         role: 'USER',
-        isVerified: true
+        isVerified: false
       }
     });
 
-    // Generate User JWT session token immediately
-    const token = jwt.sign(
-      {
-        userId: newUser.id,
-        email: newUser.email,
-        role: 'USER',
-        type: 'USER'
-      },
-      config.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    // Invalidate any old tokens for this email
+    await prisma.emailVerification.updateMany({
+      where: { email: userEmail, used: false },
+      data: { used: true }
+    });
+
+    // Generate single-use expiring verification token
+    const rawVerifyToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawVerifyToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.emailVerification.create({
+      data: {
+        email: userEmail,
+        tokenHash,
+        expiresAt,
+        used: false
+      }
+    });
+
+    const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${rawVerifyToken}`;
+    const emailResult = await sendVerificationEmail({
+      to: userEmail,
+      verificationUrl,
+      name: newUser.name
+    });
+
+    if (!emailResult.success) {
+      console.error(`[REGISTRATION] Failed to dispatch verification email:`, emailResult.error);
+    }
 
     return res.status(201).json({
       success: true,
-      message: 'Account created successfully! Welcome to COLORIDO 2K26.',
-      token,
-      role: 'USER',
-      redirectTo: '/events',
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        college: newUser.college,
-        course: newUser.course,
-        department: newUser.department,
-        year: newUser.year,
-        phone: newUser.phone,
-        role: 'USER',
-        isVerified: true
-      }
+      unverified: true,
+      requiresVerification: true,
+      email: newUser.email,
+      message: 'Account created successfully! A verification email has been sent to your inbox. Please verify your email before signing in.'
     });
   } catch (err) {
     next(err);
@@ -269,7 +345,7 @@ async function registerUser(req, res, next) {
 async function verifyEmail(req, res, next) {
   try {
     const token = req.query.token || req.body?.token;
-    if (!token) {
+    if (!token || typeof token !== 'string') {
       return res.status(400).json({
         success: false,
         message: 'Verification token is required.'
@@ -305,7 +381,7 @@ async function verifyEmail(req, res, next) {
       });
     }
 
-    // Mark user as verified and token as used
+    // Mark user as verified and token as used atomically
     await prisma.$transaction([
       prisma.user.update({
         where: { email: record.email },
@@ -329,6 +405,7 @@ async function verifyEmail(req, res, next) {
 
 /**
  * RESEND VERIFICATION EMAIL
+ * Rate-limited to at most 1 request per 60 seconds per email.
  */
 async function resendVerificationEmail(req, res, next) {
   try {
@@ -341,6 +418,25 @@ async function resendVerificationEmail(req, res, next) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    // Check rate-limit (60-second cooldown)
+    const recentToken = await prisma.emailVerification.findFirst({
+      where: { email: normalizedEmail },
+      orderBy: { createdAt: 'desc' }
+    });
+    if (recentToken) {
+      const elapsedSec = (Date.now() - new Date(recentToken.createdAt).getTime()) / 1000;
+      if (elapsedSec < 60) {
+        const waitTime = Math.ceil(60 - elapsedSec);
+        return res.status(429).json({
+          success: false,
+          rateLimited: true,
+          retryAfter: waitTime,
+          message: `Please wait ${waitTime} seconds before requesting another verification email.`
+        });
+      }
+    }
+
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail }
     });
@@ -381,11 +477,6 @@ async function resendVerificationEmail(req, res, next) {
     });
 
     const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${rawVerifyToken}`;
-    console.log(`\n========================================`);
-    console.log(`[RESEND EMAIL VERIFICATION] Activation Link for ${normalizedEmail}:`);
-    console.log(`${verificationUrl}`);
-    console.log(`========================================\n`);
-
     const emailResult = await sendVerificationEmail({
       to: normalizedEmail,
       verificationUrl,
@@ -396,15 +487,13 @@ async function resendVerificationEmail(req, res, next) {
       console.error(`[RESEND VERIFICATION ERROR]`, emailResult.error);
       return res.status(502).json({
         success: false,
-        message: `Failed to deliver verification email: ${emailResult.error}`,
-        fallbackVerificationUrl: verificationUrl
+        message: `Failed to deliver verification email. Please try again shortly.`
       });
     }
 
     return res.json({
       success: true,
-      message: 'A fresh activation link has been sent to your email address.',
-      verificationUrl: config.NODE_ENV === 'development' ? verificationUrl : undefined
+      message: 'A fresh activation link has been sent to your email address.'
     });
   } catch (err) {
     next(err);
@@ -430,6 +519,24 @@ async function forgotPassword(req, res, next) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
+    // Check rate limit (60-second cooldown)
+    const recentReset = await prisma.passwordReset.findFirst({
+      where: { email: normalizedEmail },
+      orderBy: { createdAt: 'desc' }
+    });
+    if (recentReset) {
+      const elapsedSec = (Date.now() - new Date(recentReset.createdAt).getTime()) / 1000;
+      if (elapsedSec < 60) {
+        const waitTime = Math.ceil(60 - elapsedSec);
+        return res.status(429).json({
+          success: false,
+          rateLimited: true,
+          retryAfter: waitTime,
+          message: `Please wait ${waitTime} seconds before requesting another password reset.`
+        });
+      }
+    }
+
     // Check if account exists in Admin or User
     const [admin, user] = await Promise.all([
       prisma.admin.findUnique({ where: { email: normalizedEmail } }),
@@ -440,15 +547,11 @@ async function forgotPassword(req, res, next) {
     if (admin) userType = 'ADMIN';
     else if (user) userType = 'USER';
 
-    // If account does NOT exist in DB, direct user to Create Account
+    // If account does NOT exist, do NOT leak account existence
     if (!userType) {
-      console.log(`[PASSWORD RESET] Non-existent email entered: ${normalizedEmail}. Directing to Create Account.`);
-      return res.status(404).json({
-        success: false,
-        notFound: true,
-        userNotFound: true,
-        message: 'No account found with this email address. Please create an account to get started.',
-        redirectTo: `/auth?mode=signup&email=${encodeURIComponent(normalizedEmail)}`
+      return res.json({
+        success: true,
+        message: 'If an account exists with this email address, a password reset link has been dispatched to your inbox.'
       });
     }
 
@@ -479,31 +582,15 @@ async function forgotPassword(req, res, next) {
     const resetPath = `/reset-password?token=${rawToken}`;
 
     // Dispatch password reset email
-    const emailResult = await sendPasswordResetEmail({
+    await sendPasswordResetEmail({
       to: normalizedEmail,
       resetUrl: resetPath,
       name: targetName
     });
-    console.log('[PASSWORD RESET RESULT]', emailResult);
-
-    console.log(`\n========================================`);
-    console.log(`[PASSWORD RESET] Link generated for ${normalizedEmail}:`);
-    console.log(`${config.FRONTEND_URL}${resetPath}`);
-    console.log(`========================================\n`);
-
-    if (!emailResult.success) {
-      console.error(`[PASSWORD RESET ERROR] Email delivery failed:`, emailResult.error);
-      return res.status(502).json({
-        success: false,
-        message: `Unable to deliver email: ${emailResult.error || 'Connection timed out'}.`,
-        fallbackResetUrl: resetPath
-      });
-    }
 
     return res.json({
       success: true,
-      message: 'Password reset link has been dispatched to your email.',
-      data: { resetUrl: resetPath }
+      message: 'If an account exists with this email address, a password reset link has been dispatched to your inbox.'
     });
   } catch (err) {
     next(err);

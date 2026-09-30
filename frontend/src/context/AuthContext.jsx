@@ -121,12 +121,12 @@ export function AuthProvider({ children }) {
       };
     } catch (err) {
       console.error('Login error:', err);
-      if (err.response?.data?.requiresVerification) {
+      if (err.response?.data?.requiresVerification || err.response?.status === 403) {
         return {
           success: false,
           requiresVerification: true,
-          email: err.response.data.email || email,
-          message: err.response.data.message || 'Your account is not activated yet. Please verify your email before logging in.'
+          email: err.response?.data?.email || email,
+          message: err.response?.data?.message || 'Your account is not activated yet. Please verify your email before logging in.'
         };
       }
       return {
@@ -137,28 +137,18 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * User Registration (Public - Strictly role = 'USER')
+   * User Registration (Public - Strictly role = 'USER', unverified)
    */
   const register = async (userData) => {
     try {
       const res = await apiRegister(userData);
       if (res.data?.success) {
-        const { token, role, redirectTo, user: profile } = res.data;
-
-        if (token) {
-          localStorage.setItem('colorido_token', token);
-          localStorage.setItem('colorido_user_token', token);
-          localStorage.setItem('colorido_user', JSON.stringify(profile));
-
-          setUser(profile);
-          setAdmin(null);
-        }
-
         return {
           success: true,
-          role: role || 'USER',
-          redirectTo: redirectTo || '/events',
-          user: profile
+          unverified: true,
+          requiresVerification: true,
+          email: res.data.email || userData.email,
+          message: res.data.message || 'Account created successfully! Please check your email to activate your account.'
         };
       }
 
@@ -168,9 +158,15 @@ export function AuthProvider({ children }) {
       };
     } catch (err) {
       console.error('Registration error:', err);
+      const data = err.response?.data;
       return {
         success: false,
-        message: err.response?.data?.message || 'Registration failed. Please check your data and retry.'
+        alreadyExists: data?.alreadyExists,
+        isVerified: data?.isVerified,
+        rateLimited: data?.rateLimited,
+        requiresVerification: data?.requiresVerification,
+        email: data?.email || userData.email,
+        message: data?.message || 'Registration failed. Please check your data and retry.'
       };
     }
   };

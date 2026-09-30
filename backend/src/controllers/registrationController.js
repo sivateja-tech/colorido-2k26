@@ -11,13 +11,35 @@ function generateRegistrationId() {
   return `COL26-${code}`;
 }
 
+function generateVerificationCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 /**
  * Normal User: Create registration for an event.
  * Uses atomic transaction to verify event, check capacity, prevent duplicate,
- * increment registeredCount, and create Registration.
+ * increment registeredCount, create Registration, and insert RegistrationParticipants.
  */
 async function createRegistration(req, res, next) {
   try {
+    // 1. Strictly require authenticated & verified user
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please sign in to register for events.'
+      });
+    }
+
+    if (req.user.isVerified === false) {
+      return res.status(403).json({
+        success: false,
+        unverified: true,
+        requiresVerification: true,
+        email: req.user.email,
+        message: 'Your email address is not verified. Please verify your email before registering.'
+      });
+    }
+
     const {
       eventId,
       fullName,
@@ -26,51 +48,196 @@ async function createRegistration(req, res, next) {
       college,
       department,
       year,
-      participantType = 'INDIVIDUAL',
+      participantType,
+      registrationType,
       teamName,
-      teamMembers
+      teamMembers,
+      participants = []
     } = req.body;
 
     // Validate required fields
     if (!eventId || !fullName || !email || !phone || !college || !department || !year) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: event, full name, email, phone, college, department, and year are required.'
+        message: 'Missing required fields: event, captain name, email, phone, college, department, and year are required.'
       });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const captainName = fullName.trim();
+    const captainPhone = phone.trim();
+    const captainCollege = college.trim();
 
-    // If user is authenticated, verify their email or link their ID
-    const userId = req.user ? req.user.id : null;
-
+    // 2. Fetch event configuration
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) {
-      return res.status(404).json({ success: false, message: 'Event not found' });
+      return res.status(404).json({ success: false, message: 'Event not found.' });
     }
 
     if (!event.published) {
       return res.status(400).json({ success: false, message: 'Registration for this event is currently not open.' });
     }
 
+    // Check if event date has already passed
+    if (event.date) {
+      const eventDateParsed = new Date(event.date);
+      if (!isNaN(eventDateParsed.getTime())) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (eventDateParsed < today) {
+          return res.status(400).json({
+            success: false,
+            message: `Registration is closed because the event date (${event.date}) has already passed.`
+          });
+        }
+      }
+    }
+
+    // Determine effective registration type: INDIVIDUAL, GROUP, or TEAM
+    const effectiveType = (
+      registrationType ||
+      event.registrationType ||
+      participantType ||
+      event.participantType ||
+      'INDIVIDUAL'
+    ).toUpperCase();
+
+    // Parse additional team/group members
+    let additionalMembers = [];
+    if (Array.isArray(participants) && participants.length > 0) {
+      additionalMembers = participants;
+    } else if (teamMembers) {
+      if (typeof teamMembers === 'string') {
+        try {
+          const parsed = JSON.parse(teamMembers);
+          if (Array.isArray(parsed)) {
+            additionalMembers = parsed;
+          } else {
+            additionalMembers = teamMembers.split(',').map(name => ({ name: name.trim() })).filter(m => m.name);
+          }
+        } catch (e) {
+          additionalMembers = teamMembers.split(',').map(name => ({ name: name.trim() })).filter(m => m.name);
+        }
+      } else if (Array.isArray(teamMembers)) {
+        additionalMembers = teamMembers;
+      }
+    }
+
+    // Normalize additional members
+    const cleanMembers = additionalMembers
+      .map(m => {
+        if (typeof m === 'string') return { name: m.trim(), email: null, phone: null, college: captainCollege };
+        return {
+          name: (m.name || '').trim(),
+          email: m.email ? m.email.toLowerCase().trim() : null,
+          phone: m.phone ? m.phone.trim() : null,
+          college: m.college ? m.college.trim() : captainCollege
+        };
+      })
+      .filter(m => m.name.length > 0);
+
+    // Total participants = Captain (1) + Additional Members
+    const totalParticipantsCount = 1 + cleanMembers.length;
+
+    // Validate registration rules based on event configuration
+    if (effectiveType === 'INDIVIDUAL') {
+      if (cleanMembers.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'This is an individual event. Additional participants cannot be added.'
+        });
+      }
+    } else {
+      // GROUP or TEAM events
+      const minRequired = event.minTeamSize || (effectiveType === 'TEAM' ? 5 : 2);
+      const maxAllowed = event.maxTeamSize || (effectiveType === 'TEAM' ? 16 : 10);
+
+      // Check team name requirement
+      const trimmedTeamName = (teamName || '').trim();
+      if ((event.isTeamNameRequired || effectiveType === 'TEAM' || effectiveType === 'GROUP') && !trimmedTeamName) {
+        return res.status(400).json({
+          success: false,
+          message: 'Team / Group Name is required for this event.'
+        });
+      }
+
+      // Check member count
+      if (totalParticipantsCount < minRequired) {
+        return res.status(400).json({
+          success: false,
+          message: `Minimum participant requirement not met. This event requires at least ${minRequired} participants (current: ${totalParticipantsCount}).`
+        });
+      }
+
+      if (totalParticipantsCount > maxAllowed) {
+        return res.status(400).json({
+          success: false,
+          message: `Maximum participant limit exceeded. This event allows at most ${maxAllowed} participants (current: ${totalParticipantsCount}).`
+        });
+      }
+
+      // Check if member emails are strictly required by event
+      if (event.areMemberEmailsRequired) {
+        for (const m of cleanMembers) {
+          if (!m.email || !m.email.includes('@')) {
+            return res.status(400).json({
+              success: false,
+              message: `Participant ${m.name} is missing a valid email address, which is required for this event.`
+            });
+          }
+        }
+      }
+
+      // Check for duplicate participant names within the same team submission
+      const allNames = [captainName.toLowerCase(), ...cleanMembers.map(m => m.name.toLowerCase())];
+      const uniqueNames = new Set(allNames);
+      if (uniqueNames.size !== allNames.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'Duplicate participant names detected within your registration. Each participant must have a distinct name.'
+        });
+      }
+    }
+
+    const normalizedTeamName = teamName ? teamName.trim() : null;
+
     let registration;
     try {
       registration = await prisma.$transaction(async (tx) => {
-        // 1. Prevent duplicate registration
-        const existing = await tx.registration.findFirst({
+        // 1. Prevent duplicate active registration by Captain Email
+        const existingByEmail = await tx.registration.findFirst({
           where: {
             eventId,
-            email: normalizedEmail
+            email: normalizedEmail,
+            status: { notIn: ['CANCELLED', 'REJECTED'] }
           }
         });
 
-        if (existing) {
-          const err = new Error(`You have already registered for ${event.title} with email ${normalizedEmail}.`);
+        if (existingByEmail) {
+          const err = new Error(`You have already registered for ${event.title} (Registration ID: ${existingByEmail.registrationId}).`);
           err.statusCode = 409;
+          err.existingRegistrationId = existingByEmail.registrationId;
           throw err;
         }
 
-        // 2. Prevent capacity overflow with atomic check
+        // 2. Prevent duplicate active registration by Team Name
+        if (normalizedTeamName) {
+          const existingByTeam = await tx.registration.findFirst({
+            where: {
+              eventId,
+              teamName: { equals: normalizedTeamName, mode: 'insensitive' },
+              status: { notIn: ['CANCELLED', 'REJECTED'] }
+            }
+          });
+
+          if (existingByTeam) {
+            const err = new Error(`A team named "${normalizedTeamName}" has already registered for ${event.title}. Please choose a unique team name.`);
+            err.statusCode = 409;
+            throw err;
+          }
+        }
+
+        // 3. Prevent capacity overflow with atomic check
         const currentEvent = await tx.event.findUnique({
           where: { id: eventId },
           select: { capacity: true, registeredCount: true }
@@ -88,35 +255,65 @@ async function createRegistration(req, res, next) {
           data: { registeredCount: { increment: 1 } }
         });
 
-        // 3. Unique registration ID
+        // 4. Generate unique human-readable Registration ID
         let registrationId = generateRegistrationId();
         while (await tx.registration.findUnique({ where: { registrationId } })) {
           registrationId = generateRegistrationId();
         }
 
-        // QR data payload: direct scannable verification URL
-        const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
-        const qrPayload = `${frontendUrl}/verify/${registrationId}`;
+        // 5. Generate 6-digit verification code
+        const verificationCode = generateVerificationCode();
 
+        // Pass URL payload
+        const frontendUrl = config.FRONTEND_URL || 'http://localhost:5173';
+        const passPayload = `${frontendUrl}/verify/${registrationId}`;
+
+        // 6. Create Registration record
         const newReg = await tx.registration.create({
           data: {
             registrationId,
-            userId,
+            verificationCode,
+            userId: req.user.id,
             eventId,
-            fullName: fullName.trim(),
+            fullName: captainName,
             email: normalizedEmail,
-            phone: phone.trim(),
-            college: college.trim(),
+            phone: captainPhone,
+            college: captainCollege,
             department: department.trim(),
             year: year.trim(),
-            participantType: participantType.toUpperCase(),
-            teamName: teamName ? teamName.trim() : null,
-            teamMembers: teamMembers ? (typeof teamMembers === 'string' ? teamMembers : JSON.stringify(teamMembers)) : null,
+            participantType: effectiveType,
+            teamName: normalizedTeamName,
+            teamMembers: cleanMembers.length > 0 ? JSON.stringify(cleanMembers.map(m => m.name)) : null,
             status: 'CONFIRMED',
-            qrData: qrPayload
+            qrData: passPayload,
+            participants: {
+              create: [
+                // Captain / Primary registrant (Order 0)
+                {
+                  name: captainName,
+                  email: normalizedEmail,
+                  phone: captainPhone,
+                  college: captainCollege,
+                  isCaptain: true,
+                  order: 0
+                },
+                // Additional members (Order 1..N)
+                ...cleanMembers.map((m, idx) => ({
+                  name: m.name,
+                  email: m.email || null,
+                  phone: m.phone || null,
+                  college: m.college || captainCollege,
+                  isCaptain: false,
+                  order: idx + 1
+                }))
+              ]
+            }
           },
           include: {
-            event: true
+            event: true,
+            participants: {
+              orderBy: { order: 'asc' }
+            }
           }
         });
 
@@ -124,10 +321,17 @@ async function createRegistration(req, res, next) {
       });
     } catch (txError) {
       if (txError.statusCode) {
-        return res.status(txError.statusCode).json({ success: false, message: txError.message });
+        return res.status(txError.statusCode).json({
+          success: false,
+          message: txError.message,
+          existingRegistrationId: txError.existingRegistrationId
+        });
       }
       if (txError.code === 'P2002') {
-        return res.status(409).json({ success: false, message: `Duplicate registration detected for email ${normalizedEmail}.` });
+        return res.status(409).json({
+          success: false,
+          message: `Duplicate registration detected for this event.`
+        });
       }
       throw txError;
     }
@@ -144,7 +348,6 @@ async function createRegistration(req, res, next) {
 
 /**
  * Normal User: Get own registrations only
- * Section 47 & Section 57: Normal users must ONLY see their own registrations.
  */
 async function getUserRegistrations(req, res, next) {
   try {
@@ -171,8 +374,12 @@ async function getUserRegistrations(req, res, next) {
             startTime: true,
             endTime: true,
             venue: true,
-            prizePool: true
+            prizePool: true,
+            registrationType: true
           }
+        },
+        participants: {
+          orderBy: { order: 'asc' }
         }
       }
     });
@@ -201,6 +408,9 @@ async function getRegistrationById(req, res, next) {
       },
       include: {
         event: true,
+        participants: {
+          orderBy: { order: 'asc' }
+        },
         user: {
           select: {
             id: true,
@@ -230,11 +440,10 @@ async function getRegistrationById(req, res, next) {
 
 /**
  * Admin: Get ALL registrations with search, filter, pagination
- * Section 53
  */
 async function getAllRegistrations(req, res, next) {
   try {
-    const { search, eventId, category, status, page = 1, limit = 25 } = req.query;
+    const { search, eventId, category, status, participantType, page = 1, limit = 50 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
     const where = {};
@@ -251,6 +460,10 @@ async function getAllRegistrations(req, res, next) {
       where.status = status.toUpperCase();
     }
 
+    if (participantType) {
+      where.participantType = participantType.toUpperCase();
+    }
+
     if (search && search.trim()) {
       const q = search.trim();
       where.OR = [
@@ -260,7 +473,8 @@ async function getAllRegistrations(req, res, next) {
         { phone: { contains: q, mode: 'insensitive' } },
         { college: { contains: q, mode: 'insensitive' } },
         { teamName: { contains: q, mode: 'insensitive' } },
-        { event: { title: { contains: q, mode: 'insensitive' } } }
+        { event: { title: { contains: q, mode: 'insensitive' } } },
+        { participants: { some: { name: { contains: q, mode: 'insensitive' } } } }
       ];
     }
 
@@ -277,8 +491,12 @@ async function getAllRegistrations(req, res, next) {
               title: true,
               category: true,
               date: true,
-              venue: true
+              venue: true,
+              registrationType: true
             }
+          },
+          participants: {
+            orderBy: { order: 'asc' }
           }
         }
       }),
@@ -328,7 +546,12 @@ async function updateRegistrationStatus(req, res, next) {
         checkedIn: status.toUpperCase() === 'CHECKED_IN' ? true : existing.checkedIn,
         checkedInAt: status.toUpperCase() === 'CHECKED_IN' ? (existing.checkedInAt || new Date()) : existing.checkedInAt
       },
-      include: { event: true }
+      include: {
+        event: true,
+        participants: {
+          orderBy: { order: 'asc' }
+        }
+      }
     });
 
     res.json({
@@ -343,6 +566,7 @@ async function updateRegistrationStatus(req, res, next) {
 
 /**
  * Admin / Mobile Check-in: Search Registration ID, Verify Participant, Mark as Checked In
+ * Checks in the entire registration / team and returns full participant details with captain
  */
 async function checkInParticipant(req, res, next) {
   try {
@@ -361,6 +585,9 @@ async function checkInParticipant(req, res, next) {
       },
       include: {
         event: true,
+        participants: {
+          orderBy: { order: 'asc' }
+        },
         user: true
       }
     });
@@ -368,7 +595,7 @@ async function checkInParticipant(req, res, next) {
     if (!registration) {
       return res.status(404).json({
         success: false,
-        message: `No registration found matching "${query}". Please check the ID or QR code.`
+        message: `No registration found matching "${query}". Please check the Registration ID.`
       });
     }
 
@@ -398,13 +625,16 @@ async function checkInParticipant(req, res, next) {
       },
       include: {
         event: true,
+        participants: {
+          orderBy: { order: 'asc' }
+        },
         user: true
       }
     });
 
     res.json({
       success: true,
-      message: `Participant ${updated.fullName} successfully checked in for ${updated.event.title}!`,
+      message: `Participant ${updated.fullName} and team successfully checked in for ${updated.event.title}!`,
       data: updated
     });
   } catch (err) {

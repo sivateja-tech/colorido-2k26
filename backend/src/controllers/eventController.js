@@ -199,6 +199,10 @@ async function createEvent(req, res, next) {
         participantType: participantType.toUpperCase(),
         minTeamSize: parseInt(minTeamSize) || 1,
         maxTeamSize: parseInt(maxTeamSize) || 1,
+        registrationType: (registrationType || (participantType === 'TEAM' ? 'TEAM' : (participantType === 'GROUP' ? 'GROUP' : 'INDIVIDUAL'))).toUpperCase(),
+        isTeamNameRequired: Boolean(isTeamNameRequired || participantType === 'TEAM' || registrationType === 'TEAM'),
+        isCaptainRequired: isCaptainRequired !== undefined ? Boolean(isCaptainRequired) : true,
+        areMemberEmailsRequired: Boolean(areMemberEmailsRequired),
         featured: Boolean(featured),
         published: Boolean(published),
         imageUrl: imageUrl || null,
@@ -311,6 +315,10 @@ async function updateEvent(req, res, next) {
     if (participantType !== undefined) data.participantType = participantType.toUpperCase();
     if (minTeamSize !== undefined) data.minTeamSize = parseInt(minTeamSize);
     if (maxTeamSize !== undefined) data.maxTeamSize = parseInt(maxTeamSize);
+    if (req.body.registrationType !== undefined) data.registrationType = req.body.registrationType.toUpperCase();
+    if (req.body.isTeamNameRequired !== undefined) data.isTeamNameRequired = Boolean(req.body.isTeamNameRequired);
+    if (req.body.isCaptainRequired !== undefined) data.isCaptainRequired = Boolean(req.body.isCaptainRequired);
+    if (req.body.areMemberEmailsRequired !== undefined) data.areMemberEmailsRequired = Boolean(req.body.areMemberEmailsRequired);
     if (imageUrl !== undefined) data.imageUrl = imageUrl;
     if (featured !== undefined) data.featured = Boolean(featured);
     if (published !== undefined) data.published = Boolean(published);

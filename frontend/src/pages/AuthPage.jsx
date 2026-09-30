@@ -46,11 +46,23 @@ export default function AuthPage() {
   const [resendingVerification, setResendingVerification] = useState(false);
   const [resendStatusMsg, setResendStatusMsg] = useState('');
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // General feedback state
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(location.state?.error || '');
   const [successMsg, setSuccessMsg] = useState(location.state?.message || '');
+
+  // Cooldown countdown timer
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   // Sync mode and prefill email whenever searchParams or location.state change
   useEffect(() => {
@@ -85,6 +97,7 @@ export default function AuthPage() {
   // Handle Sign In submission
   const handleSignIn = async (e) => {
     e.preventDefault();
+    if (loading) return; // Prevent double-click
     setErrorMsg('');
     setSuccessMsg('');
     setUnverifiedEmail('');
@@ -99,7 +112,12 @@ export default function AuthPage() {
           navigate(redirectTarget || '/events', { replace: true });
         }
       } else {
-        setErrorMsg(res.message || 'Invalid email or password.');
+        if (res.requiresVerification) {
+          setUnverifiedEmail(res.email || signInEmail);
+          setErrorMsg(res.message || 'Your account is not verified. Please verify your email before logging in.');
+        } else {
+          setErrorMsg(res.message || 'Invalid email or password.');
+        }
       }
     } catch (err) {
       setErrorMsg('A connection error occurred. Please try again.');
@@ -111,6 +129,7 @@ export default function AuthPage() {
   // Handle Create Account submission
   const handleSignUp = async (e) => {
     e.preventDefault();
+    if (loading) return; // Prevent double-click
     setErrorMsg('');
     setSuccessMsg('');
     setVerificationPending(null);
@@ -130,9 +149,17 @@ export default function AuthPage() {
     try {
       const res = await register(signUpForm);
       if (res.success) {
-        navigate(redirectTarget || '/events', { replace: true });
+        setVerificationPending({ email: res.email || signUpForm.email });
+        setSuccessMsg(res.message || 'Account created! Please check your email to activate your account.');
       } else {
-        setErrorMsg(res.message || 'Registration failed.');
+        if (res.alreadyExists && res.isVerified) {
+          setErrorMsg('An account with this email is already registered and verified. Please sign in instead.');
+        } else if (res.requiresVerification || (res.alreadyExists && !res.isVerified)) {
+          setVerificationPending({ email: res.email || signUpForm.email });
+          setSuccessMsg(res.message || 'An unverified account with this email exists. A verification email has been sent.');
+        } else {
+          setErrorMsg(res.message || 'Registration failed.');
+        }
       }
     } catch (err) {
       setErrorMsg('A connection error occurred. Please try again.');
@@ -143,6 +170,7 @@ export default function AuthPage() {
 
   // Resend email verification handler
   const handleResendVerification = async (targetEmail) => {
+    if (resendingVerification || resendCooldown > 0) return;
     const emailToUse = targetEmail || verificationPending?.email || unverifiedEmail || signInEmail;
     if (!emailToUse) return;
 
@@ -151,8 +179,15 @@ export default function AuthPage() {
     try {
       const res = await resendEmailVerification(emailToUse);
       setResendStatusMsg(res.data?.message || 'A fresh activation link has been sent to your email.');
+      setResendCooldown(60);
     } catch (err) {
-      setResendStatusMsg(err.response?.data?.message || 'Failed to resend activation link. Please try again shortly.');
+      if (err.response?.status === 429) {
+        const retry = err.response?.data?.retryAfter || 60;
+        setResendCooldown(retry);
+        setResendStatusMsg(err.response?.data?.message || `Please wait ${retry} seconds before requesting another email.`);
+      } else {
+        setResendStatusMsg(err.response?.data?.message || 'Failed to resend activation link. Please try again shortly.');
+      }
     } finally {
       setResendingVerification(false);
     }
@@ -263,12 +298,18 @@ export default function AuthPage() {
               <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
                 <button
                   type="button"
-                  disabled={resendingVerification}
+                  disabled={resendingVerification || resendCooldown > 0}
                   onClick={() => handleResendVerification(verificationPending.email)}
-                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-xs font-bold text-[#ECF0F1] bg-[#1a252f] hover:bg-[#243342] border border-[#95A5A6]/30 transition-all flex items-center justify-center gap-2"
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-xs font-bold text-[#ECF0F1] bg-[#1a252f] hover:bg-[#243342] border border-[#95A5A6]/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${resendingVerification ? 'animate-spin' : ''}`} />
-                  <span>{resendingVerification ? 'Resending Link...' : 'Resend Email'}</span>
+                  <span>
+                    {resendingVerification
+                      ? 'Resending Link...'
+                      : resendCooldown > 0
+                      ? `Resend in ${resendCooldown}s`
+                      : 'Resend Verification Email'}
+                  </span>
                 </button>
 
                 <button
@@ -344,12 +385,18 @@ export default function AuthPage() {
                     <span className="font-semibold text-[#E67E22]">Account Pending Email Verification</span>
                     <button
                       type="button"
-                      disabled={resendingVerification}
+                      disabled={resendingVerification || resendCooldown > 0}
                       onClick={() => handleResendVerification(unverifiedEmail)}
-                      className="px-3 py-1.5 rounded-xl bg-[#E67E22] hover:bg-[#d35400] text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors self-start sm:self-auto"
+                      className="px-3 py-1.5 rounded-xl bg-[#E67E22] hover:bg-[#d35400] text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors self-start sm:self-auto disabled:opacity-50"
                     >
                       <RefreshCw className={`w-3 h-3 ${resendingVerification ? 'animate-spin' : ''}`} />
-                      <span>Resend Activation Link</span>
+                      <span>
+                        {resendingVerification
+                          ? 'Resending...'
+                          : resendCooldown > 0
+                          ? `Resend in ${resendCooldown}s`
+                          : 'Resend Verification Email'}
+                      </span>
                     </button>
                   </div>
                   {resendStatusMsg && (
