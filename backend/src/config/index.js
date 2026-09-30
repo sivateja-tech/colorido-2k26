@@ -6,6 +6,9 @@ const resolvedEmailFrom = (rawEmailFrom && !rawEmailFrom.includes('resend.dev'))
   ? rawEmailFrom 
   : defaultEmailFrom;
 
+const smtpUser = (process.env.SMTP_USER || 'hackerbot2005@gmail.com').trim();
+const smtpPass = (process.env.SMTP_PASS || 'mxtiggrkkwfvwkah').replace(/\s+/g, '');
+
 module.exports = {
   PORT: process.env.PORT || 5000,
   NODE_ENV: process.env.NODE_ENV || 'development',
@@ -15,13 +18,15 @@ module.exports = {
   ADMIN_DEFAULT_PASSWORD: process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@Colorido2026!',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
   EMAIL_FROM: resolvedEmailFrom,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  BREVO_API_KEY: process.env.BREVO_API_KEY,
   SMTP: {
     SERVICE: process.env.SMTP_SERVICE || 'gmail',
     HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
     PORT: parseInt(process.env.SMTP_PORT || '465', 10),
     SECURE: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
-    USER: process.env.SMTP_USER || 'hackerbot2005@gmail.com',
-    PASS: process.env.SMTP_PASS || 'mxtiggrkkwfvwkah',
+    USER: smtpUser,
+    PASS: smtpPass,
     FROM: resolvedEmailFrom
   }
 };

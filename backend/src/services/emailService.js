@@ -3,44 +3,49 @@ const config = require('../config');
 
 let transporter = null;
 
+const { Resend } = require('resend');
+let resendInstance = null;
+
+function getResend() {
+  if (!resendInstance && config.RESEND_API_KEY) {
+    resendInstance = new Resend(config.RESEND_API_KEY.trim());
+  }
+  return resendInstance;
+}
+
 /**
- * Get or initialize nodemailer transporter
+ * Get or initialize nodemailer transporter with connection timeouts
  */
 function getTransporter() {
   if (!transporter) {
-    if (config.SMTP.SERVICE === 'gmail' || !config.SMTP.HOST) {
-      transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: config.SMTP.USER,
-          pass: config.SMTP.PASS
-        }
-      });
-    } else {
-      transporter = nodemailer.createTransport({
-        host: config.SMTP.HOST,
-        port: config.SMTP.PORT,
-        secure: config.SMTP.SECURE,
-        auth: {
-          user: config.SMTP.USER,
-          pass: config.SMTP.PASS
-        }
-      });
-    }
+    transporter = nodemailer.createTransport({
+      service: config.SMTP.SERVICE || 'gmail',
+      host: config.SMTP.HOST || 'smtp.gmail.com',
+      port: config.SMTP.PORT || 465,
+      secure: config.SMTP.SECURE,
+      connectionTimeout: 4000, // 4-second timeout to fail fast if port is blocked by Render
+      greetingTimeout: 4000,
+      socketTimeout: 6000,
+      auth: {
+        user: config.SMTP.USER,
+        pass: config.SMTP.PASS
+      }
+    });
   }
   return transporter;
 }
 
 /**
- * Helper to dispatch email via Nodemailer Gmail SMTP
+ * Helper to dispatch email via Nodemailer Gmail SMTP with automatic HTTP API fallback
  */
 async function dispatchEmail({ to, subject, html, text }) {
   const recipientList = Array.isArray(to) ? to.join(', ') : to;
   const fromAddress = config.SMTP.FROM || config.EMAIL_FROM || 'COLORIDO 2K26 <hackerbot2005@gmail.com>';
 
+  // Attempt 1: Gmail SMTP via Nodemailer
   try {
     const transport = getTransporter();
-    console.log(`[GMAIL SMTP ATTEMPT] Sending email to ${recipientList} from "${fromAddress}" with subject "${subject}"...`);
+    console.log(`[SMTP ATTEMPT] Sending email to ${recipientList} via ${config.SMTP.HOST}:${config.SMTP.PORT}...`);
 
     const info = await transport.sendMail({
       from: fromAddress,
@@ -50,11 +55,39 @@ async function dispatchEmail({ to, subject, html, text }) {
       text
     });
 
-    console.log(`[GMAIL SMTP SUCCESS] Delivered email to ${recipientList} (Message ID: ${info.messageId})`);
-    return { success: true, messageId: info.messageId };
-  } catch (err) {
-    console.error(`[GMAIL SMTP ERROR] Failed to send email to ${recipientList}:`, err.message);
-    return { success: false, error: err.message };
+    console.log(`[SMTP SUCCESS] Delivered email to ${recipientList} (Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId, provider: 'smtp' };
+  } catch (smtpErr) {
+    console.warn(`[SMTP BLOCKED/FAILED] ${smtpErr.message}. Checking HTTP API fallback (Port 443)...`);
+
+    // Attempt 2: Resend HTTP REST API over Port 443 (Render free tier unblocked)
+    const resend = getResend();
+    if (resend) {
+      try {
+        console.log(`[HTTP API FALLBACK] Attempting delivery via Resend API (HTTPS Port 443) to ${recipientList}...`);
+        const { data, error } = await resend.emails.send({
+          from: 'COLORIDO 2K26 <onboarding@resend.dev>',
+          to: Array.isArray(to) ? to : [to],
+          subject,
+          html,
+          text
+        });
+
+        if (data && data.id) {
+          console.log(`[HTTP API SUCCESS] Delivered via Resend to ${recipientList} (ID: ${data.id})`);
+          return { success: true, messageId: data.id, provider: 'resend' };
+        } else if (error) {
+          console.error(`[HTTP API ERROR] Resend error:`, error);
+        }
+      } catch (resendErr) {
+        console.error(`[HTTP API EXCEPTION] Resend exception:`, resendErr.message);
+      }
+    }
+
+    return {
+      success: false,
+      error: `SMTP connection failed (${smtpErr.message}). Note: Render free tier blocks outbound SMTP ports 465/587.`
+    };
   }
 }
 

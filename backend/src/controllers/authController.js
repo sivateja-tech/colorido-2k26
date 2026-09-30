@@ -467,11 +467,20 @@ async function resendVerificationEmail(req, res, next) {
     console.log(`${verificationUrl}`);
     console.log(`========================================\n`);
 
-    await sendVerificationEmail({
+    const emailResult = await sendVerificationEmail({
       to: normalizedEmail,
       verificationUrl,
       name: user.name || 'Participant'
     });
+
+    if (!emailResult.success) {
+      console.error(`[RESEND VERIFICATION ERROR]`, emailResult.error);
+      return res.status(502).json({
+        success: false,
+        message: `Failed to deliver verification email: ${emailResult.error}`,
+        fallbackVerificationUrl: verificationUrl
+      });
+    }
 
     return res.json({
       success: true,
@@ -550,18 +559,27 @@ async function forgotPassword(req, res, next) {
     const targetName = admin?.name || user?.name || 'Participant';
     const resetPath = `/reset-password?token=${rawToken}`;
 
-    // Dispatch email via Resend
+    // Dispatch password reset email
     const emailResult = await sendPasswordResetEmail({
       to: normalizedEmail,
       resetUrl: resetPath,
       name: targetName
     });
-    console.log('[PASSWORD RESET RESEND RESULT]', emailResult);
+    console.log('[PASSWORD RESET RESULT]', emailResult);
 
     console.log(`\n========================================`);
     console.log(`[PASSWORD RESET] Link generated for ${normalizedEmail}:`);
-    console.log(`http://localhost:5173${resetPath}`);
+    console.log(`${config.FRONTEND_URL}${resetPath}`);
     console.log(`========================================\n`);
+
+    if (!emailResult.success) {
+      console.error(`[PASSWORD RESET ERROR] Email delivery failed:`, emailResult.error);
+      return res.status(502).json({
+        success: false,
+        message: `Unable to deliver email: ${emailResult.error || 'Connection timed out'}.`,
+        fallbackResetUrl: resetPath
+      });
+    }
 
     return res.json({
       success: true,
