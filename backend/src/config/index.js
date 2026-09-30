@@ -1,5 +1,11 @@
 require('dotenv').config();
 
+const rawEmailFrom = process.env.EMAIL_FROM;
+const defaultEmailFrom = 'COLORIDO 2K26 <hackerbot2005@gmail.com>';
+const resolvedEmailFrom = (rawEmailFrom && !rawEmailFrom.includes('resend.dev')) 
+  ? rawEmailFrom 
+  : defaultEmailFrom;
+
 module.exports = {
   PORT: process.env.PORT || 5000,
   NODE_ENV: process.env.NODE_ENV || 'development',
@@ -8,7 +14,7 @@ module.exports = {
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@colorido2k26.com',
   ADMIN_DEFAULT_PASSWORD: process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@Colorido2026!',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
-  EMAIL_FROM: process.env.EMAIL_FROM || 'COLORIDO 2K26 <hackerbot2005@gmail.com>',
+  EMAIL_FROM: resolvedEmailFrom,
   SMTP: {
     SERVICE: process.env.SMTP_SERVICE || 'gmail',
     HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -16,6 +22,6 @@ module.exports = {
     SECURE: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
     USER: process.env.SMTP_USER || 'hackerbot2005@gmail.com',
     PASS: process.env.SMTP_PASS || 'mxtiggrkkwfvwkah',
-    FROM: process.env.EMAIL_FROM || 'COLORIDO 2K26 <hackerbot2005@gmail.com>'
+    FROM: resolvedEmailFrom
   }
 };
