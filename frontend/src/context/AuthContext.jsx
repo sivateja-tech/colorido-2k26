@@ -180,12 +180,30 @@ export function AuthProvider({ children }) {
       return res.data;
     } catch (err) {
       const errData = err.response?.data;
+      let errorMsg = 'Failed to process password reset request.';
+
+      if (err.message === 'Network Error' || !err.response) {
+        errorMsg = 'Cannot connect to COLORIDO festival servers. Please check your internet connection or verify the backend server is running.';
+      } else if (typeof errData === 'string' && (errData.includes('ECONNREFUSED') || errData.includes('proxy error'))) {
+        errorMsg = 'Backend server is offline (Port 5000 not reachable). Please start the backend service.';
+      } else if (typeof errData === 'string' && errData.includes('<!DOCTYPE')) {
+        errorMsg = 'Festival API server error. The server returned an HTML error response.';
+      } else if (errData?.message) {
+        errorMsg = errData.message;
+      } else if (errData?.error) {
+        errorMsg = errData.error;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+
       return {
         success: false,
         notFound: Boolean(errData?.notFound || errData?.userNotFound || err.response?.status === 404),
         userNotFound: Boolean(errData?.userNotFound || errData?.notFound || err.response?.status === 404),
+        rateLimited: Boolean(errData?.rateLimited || err.response?.status === 429),
+        retryAfter: errData?.retryAfter,
         redirectTo: errData?.redirectTo,
-        message: errData?.message || 'Failed to process password reset request.'
+        message: errorMsg
       };
     }
   };
@@ -198,9 +216,11 @@ export function AuthProvider({ children }) {
       const res = await apiResetPassword(payload);
       return res.data;
     } catch (err) {
+      const errData = err.response?.data;
+      const errorMsg = errData?.message || (err.message === 'Network Error' ? 'Cannot connect to COLORIDO festival servers. Please check your connection.' : 'Failed to reset password.');
       return {
         success: false,
-        message: err.response?.data?.message || 'Failed to reset password.'
+        message: errorMsg
       };
     }
   };

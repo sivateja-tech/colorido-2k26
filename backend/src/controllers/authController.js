@@ -605,9 +605,12 @@ async function forgotPassword(req, res, next) {
       console.error(`[FORGOT PASSWORD] Email dispatch failed:`, emailResult.error);
     }
 
+    const isDev = process.env.NODE_ENV !== 'production';
+
     return res.json({
       success: true,
-      message: 'If an account exists with this email address, a password reset link has been dispatched to your inbox.'
+      message: 'If an account exists with this email address, a password reset link has been dispatched to your inbox.',
+      ...(isDev && { data: { resetUrl: `/reset-password?token=${rawToken}` } })
     });
   } catch (err) {
     next(err);
