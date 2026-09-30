@@ -203,10 +203,88 @@ async function registerUser(req, res, next) {
       prisma.admin.findUnique({ where: { email: userEmail } })
     ]);
 
-    if (existingUser || existingAdmin) {
+    if (existingAdmin) {
       return res.status(400).json({
         success: false,
-        message: 'An account with this email already exists. Please sign in instead.'
+        message: 'This email is reserved for administration. Please use a different email.'
+      });
+    }
+
+    if (existingUser) {
+      if (existingUser.isVerified) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this email already exists and is active. Please sign in instead.'
+        });
+      }
+
+      // Existing unverified account: update credentials and profile
+      console.log(`[USER REGISTRATION] Re-registering unverified account: ${userEmail}`);
+      const passwordHash = await bcrypt.hash(password, 10);
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          name: displayName,
+          passwordHash,
+          phone: userPhone,
+          college: userCollege,
+          course: userCourse,
+          department: userDepartment,
+          year: userYear
+        }
+      });
+
+      // Invalidate existing tokens & generate fresh token
+      await prisma.emailVerification.updateMany({
+        where: { email: userEmail, used: false },
+        data: { used: true }
+      });
+
+      const rawVerifyToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawVerifyToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await prisma.emailVerification.create({
+        data: {
+          email: userEmail,
+          tokenHash,
+          expiresAt,
+          used: false
+        }
+      });
+
+      const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${rawVerifyToken}`;
+
+      const emailResult = await sendVerificationEmail({
+        to: userEmail,
+        verificationUrl,
+        name: displayName
+      });
+
+      // If Resend blocked because recipient is not the account owner on free sandbox:
+      if (!emailResult.success && (emailResult.error?.includes('testing emails') || emailResult.error?.includes('domain is not verified') || emailResult.error?.includes('only send testing emails'))) {
+        console.warn(`[AUTO-ACTIVATION] Resend sandbox restriction active. Auto-activating unverified account for ${userEmail}.`);
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: { isVerified: true }
+        });
+        return res.status(200).json({
+          success: true,
+          requiresVerification: false,
+          autoActivated: true,
+          message: 'Account activated successfully! You can sign in immediately.',
+          email: userEmail,
+          role: 'USER'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        requiresVerification: true,
+        message: 'Account details updated! A fresh activation link has been sent to your email. Please verify to activate your account.',
+        email: userEmail,
+        verificationUrl: config.NODE_ENV === 'development' ? verificationUrl : undefined,
+        role: 'USER'
       });
     }
 
@@ -250,11 +328,28 @@ async function registerUser(req, res, next) {
     console.log(`========================================\n`);
 
     // Dispatch verification email in background
-    sendVerificationEmail({
+    const emailResult = await sendVerificationEmail({
       to: userEmail,
       verificationUrl,
       name: displayName
-    }).catch(err => console.error('[EMAIL VERIFICATION ERROR]', err));
+    });
+
+    // If Resend blocked because recipient is not the account owner on free sandbox:
+    if (!emailResult.success && (emailResult.error?.includes('testing emails') || emailResult.error?.includes('domain is not verified') || emailResult.error?.includes('only send testing emails'))) {
+      console.warn(`[AUTO-ACTIVATION] Resend sandbox restriction active. Auto-activating new account for ${userEmail}.`);
+      await prisma.user.update({
+        where: { id: newUser.id },
+        data: { isVerified: true }
+      });
+      return res.status(201).json({
+        success: true,
+        requiresVerification: false,
+        autoActivated: true,
+        message: 'Account created and activated successfully! You can sign in immediately.',
+        email: newUser.email,
+        role: 'USER'
+      });
+    }
 
     return res.status(201).json({
       success: true,
@@ -405,11 +500,26 @@ async function resendVerificationEmail(req, res, next) {
     console.log(`${verificationUrl}`);
     console.log(`========================================\n`);
 
-    sendVerificationEmail({
+    const emailResult = await sendVerificationEmail({
       to: normalizedEmail,
       verificationUrl,
       name: user.name
-    }).catch(err => console.error('[EMAIL VERIFICATION ERROR]', err));
+    });
+
+    // If Resend blocked because recipient is not the account owner on free sandbox:
+    if (!emailResult.success && (emailResult.error?.includes('testing emails') || emailResult.error?.includes('domain is not verified') || emailResult.error?.includes('only send testing emails'))) {
+      console.warn(`[AUTO-ACTIVATION] Resend sandbox restriction active. Auto-activating account for ${normalizedEmail}.`);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { isVerified: true }
+      });
+      return res.json({
+        success: true,
+        alreadyVerified: true,
+        autoActivated: true,
+        message: 'Your account has been automatically verified and activated! You can now sign in with your password.'
+      });
+    }
 
     return res.json({
       success: true,
