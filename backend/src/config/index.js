@@ -8,8 +8,6 @@ const resolvedEmailFrom = (rawEmailFrom && !rawEmailFrom.includes('resend.dev'))
 
 const smtpUser = (process.env.SMTP_USER || 'hackerbot2005@gmail.com').trim();
 const smtpPass = (process.env.SMTP_PASS || 'mxtiggrkkwfvwkah').replace(/\s+/g, '');
-const brevoApiKey = (process.env.BREVO_API_KEY || process.env.BREVO_KEY || process.env.SENDINBLUE_API_KEY || '').trim();
-const brevoSenderEmail = (process.env.BREVO_SENDER_EMAIL || smtpUser || 'hackerbot2005@gmail.com').trim();
 
 module.exports = {
   PORT: process.env.PORT || 5000,
@@ -21,8 +19,6 @@ module.exports = {
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
   EMAIL_FROM: resolvedEmailFrom,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
-  BREVO_API_KEY: brevoApiKey,
-  BREVO_SENDER_EMAIL: brevoSenderEmail,
   SMTP: {
     SERVICE: process.env.SMTP_SERVICE || 'gmail',
     HOST: process.env.SMTP_HOST || 'smtp.gmail.com',

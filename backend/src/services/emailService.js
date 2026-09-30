@@ -1,4 +1,7 @@
+const nodemailer = require('nodemailer');
 const dns = require('dns');
+const config = require('../config');
+
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
@@ -436,6 +439,8 @@ module.exports = {
   sendPasswordResetEmail,
   sendVerificationEmail,
   sendContactReplyEmail,
-  getTransporter,
-  getResendClient: getTransporter
+  getTransporter: getTransporter465,
+  getTransporter465,
+  getTransporter587,
+  getResendClient: getTransporter465
 };
