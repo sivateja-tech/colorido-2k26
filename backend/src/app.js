@@ -17,6 +17,9 @@ const healthRoutes = require('./routes/healthRoutes');
 
 const app = express();
 
+// Trust proxy for reverse proxies like Vercel, Render, AWS
+app.set('trust proxy', 1);
+
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   contentSecurityPolicy: false
