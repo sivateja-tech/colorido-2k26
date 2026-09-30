@@ -1,46 +1,48 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 const config = require('../config');
 
-let resendClient = null;
+let transporter = null;
 
 /**
- * Get or initialize Resend client
+ * Get or initialize nodemailer transporter
  */
-function getResendClient() {
-  if (!resendClient) {
-    const rawKey = config.RESEND_API_KEY || process.env.RESEND_API_KEY;
-    const apiKey = (typeof rawKey === 'string') ? rawKey.trim() : '';
-    if (apiKey) {
-      resendClient = new Resend(apiKey);
+function getTransporter() {
+  if (!transporter) {
+    if (config.SMTP.SERVICE === 'gmail' || !config.SMTP.HOST) {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: config.SMTP.USER,
+          pass: config.SMTP.PASS
+        }
+      });
+    } else {
+      transporter = nodemailer.createTransport({
+        host: config.SMTP.HOST,
+        port: config.SMTP.PORT,
+        secure: config.SMTP.SECURE,
+        auth: {
+          user: config.SMTP.USER,
+          pass: config.SMTP.PASS
+        }
+      });
     }
   }
-  return resendClient;
+  return transporter;
 }
 
 /**
- * Helper to dispatch email via Resend (or log gracefully if no API key is provided)
+ * Helper to dispatch email via Nodemailer Gmail SMTP
  */
 async function dispatchEmail({ to, subject, html, text }) {
-  const resend = getResendClient();
-  const recipientList = Array.isArray(to) ? to : [to];
-  
-  // Resend requires sender to be onboarding@resend.dev or a verified custom domain.
-  // Public domains like @gmail.com are strictly rejected by Resend API.
-  let fromAddress = config.EMAIL_FROM || 'COLORIDO 2K26 <onboarding@resend.dev>';
-  if (!fromAddress || fromAddress.includes('@gmail.com') || fromAddress.includes('@yahoo.com') || fromAddress.includes('@outlook.com') || fromAddress.includes('@hotmail.com')) {
-    console.warn(`[RESEND NOTICE] "${fromAddress}" is a public webmail domain. Resend requires "onboarding@resend.dev" or your verified custom domain. Using "COLORIDO 2K26 <onboarding@resend.dev>".`);
-    fromAddress = 'COLORIDO 2K26 <onboarding@resend.dev>';
-  }
-
-  if (!resend) {
-    console.warn(`[EMAIL WARNING] RESEND_API_KEY is not set. Email not sent over network.`);
-    console.log(`[LOCAL DEV EMAIL] To: ${recipientList.join(', ')} | Subject: ${subject}`);
-    return { success: true, messageId: 'local-dev-mock-' + Date.now(), isMock: true };
-  }
+  const recipientList = Array.isArray(to) ? to.join(', ') : to;
+  const fromAddress = config.SMTP.FROM || config.EMAIL_FROM || 'COLORIDO 2K26 <hackerbot2005@gmail.com>';
 
   try {
-    console.log(`[RESEND ATTEMPT] Sending email to ${recipientList.join(', ')} from "${fromAddress}" with subject "${subject}"...`);
-    const { data, error } = await resend.emails.send({
+    const transport = getTransporter();
+    console.log(`[GMAIL SMTP ATTEMPT] Sending email to ${recipientList} from "${fromAddress}" with subject "${subject}"...`);
+
+    const info = await transport.sendMail({
       from: fromAddress,
       to: recipientList,
       subject,
@@ -48,18 +50,10 @@ async function dispatchEmail({ to, subject, html, text }) {
       text
     });
 
-    if (error) {
-      console.error(`[RESEND ERROR] Failed to send email to ${recipientList.join(', ')}:`, JSON.stringify(error, null, 2));
-      if (error.statusCode === 403 || (error.message && error.message.includes('only send testing emails'))) {
-        console.error(`[RESEND HINT] Resend free testing domain (onboarding@resend.dev) ONLY allows sending to the email you used to register at resend.com. To send to any recipient, verify your domain at resend.com/domains.`);
-      }
-      return { success: false, error: error.message || error };
-    }
-
-    console.log(`[RESEND EMAIL] Successfully sent email to ${recipientList.join(', ')} (ID: ${data.id})`);
-    return { success: true, messageId: data.id };
+    console.log(`[GMAIL SMTP SUCCESS] Delivered email to ${recipientList} (Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
   } catch (err) {
-    console.error(`[RESEND EXCEPTION] Exception sending email to ${recipientList.join(', ')}:`, err);
+    console.error(`[GMAIL SMTP ERROR] Failed to send email to ${recipientList}:`, err.message);
     return { success: false, error: err.message };
   }
 }
@@ -265,7 +259,7 @@ async function sendVerificationEmail({ to, verificationUrl, name = 'Participant'
 </html>
   `;
 
-  const textContent = `Hello ${name},\n\nThank you for creating an account for COLORIDO 2K26.\n\nPlease verify your email to activate your account by clicking:\n${fullVerifyUrl}\n\nThis link will expire in 24 hours.\n\nCOLORIDO 2K26 Team`;
+  const textContent = `Hello ${name},\n\nYou requested an activation link for COLORIDO 2K26.\n\nPlease verify your email to activate your account by clicking:\n${fullVerifyUrl}\n\nThis link will expire in 24 hours.\n\nCOLORIDO 2K26 Team`;
 
   return await dispatchEmail({
     to,
@@ -362,7 +356,6 @@ module.exports = {
   sendPasswordResetEmail,
   sendVerificationEmail,
   sendContactReplyEmail,
-  getResendClient,
-  // Alias for backwards-compatibility
-  getTransporter: getResendClient
+  getTransporter,
+  getResendClient: getTransporter
 };

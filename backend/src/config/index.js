@@ -8,15 +8,14 @@ module.exports = {
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@colorido2k26.com',
   ADMIN_DEFAULT_PASSWORD: process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@Colorido2026!',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
-  RESEND_API_KEY: process.env.RESEND_API_KEY,
-  EMAIL_FROM: process.env.EMAIL_FROM || process.env.RESEND_FROM || 'COLORIDO 2K26 <onboarding@resend.dev>',
+  EMAIL_FROM: process.env.EMAIL_FROM || 'COLORIDO 2K26 <hackerbot2005@gmail.com>',
   SMTP: {
     SERVICE: process.env.SMTP_SERVICE || 'gmail',
     HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
     PORT: parseInt(process.env.SMTP_PORT || '465', 10),
     SECURE: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
-    USER: process.env.SMTP_USER || '',
-    PASS: process.env.SMTP_PASS || '',
-    FROM: process.env.EMAIL_FROM || 'COLORIDO 2K26 <onboarding@resend.dev>'
+    USER: process.env.SMTP_USER || 'hackerbot2005@gmail.com',
+    PASS: process.env.SMTP_PASS || 'mxtiggrkkwfvwkah',
+    FROM: process.env.EMAIL_FROM || 'COLORIDO 2K26 <hackerbot2005@gmail.com>'
   }
 };
