@@ -1,34 +1,55 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const config = require('../config');
 
-let transporter = null;
+let resendClient = null;
 
 /**
- * Get or initialize nodemailer transporter
+ * Get or initialize Resend client
  */
-function getTransporter() {
-  if (!transporter) {
-    if (config.SMTP.SERVICE === 'gmail') {
-      transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: config.SMTP.USER,
-          pass: config.SMTP.PASS
-        }
-      });
-    } else {
-      transporter = nodemailer.createTransport({
-        host: config.SMTP.HOST,
-        port: config.SMTP.PORT,
-        secure: config.SMTP.SECURE,
-        auth: {
-          user: config.SMTP.USER,
-          pass: config.SMTP.PASS
-        }
-      });
+function getResendClient() {
+  if (!resendClient) {
+    const apiKey = config.RESEND_API_KEY || process.env.RESEND_API_KEY;
+    if (apiKey) {
+      resendClient = new Resend(apiKey);
     }
   }
-  return transporter;
+  return resendClient;
+}
+
+/**
+ * Helper to dispatch email via Resend (or log gracefully if no API key is provided)
+ */
+async function dispatchEmail({ to, subject, html, text }) {
+  const resend = getResendClient();
+  const recipientList = Array.isArray(to) ? to : [to];
+  const fromAddress = config.EMAIL_FROM || 'COLORIDO 2K26 <onboarding@resend.dev>';
+
+  if (!resend) {
+    console.warn(`[EMAIL WARNING] RESEND_API_KEY is not set. Email not sent over network.`);
+    console.log(`[LOCAL DEV EMAIL] To: ${recipientList.join(', ')} | Subject: ${subject}`);
+    return { success: true, messageId: 'local-dev-mock-' + Date.now(), isMock: true };
+  }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
+      to: recipientList,
+      subject,
+      html,
+      text
+    });
+
+    if (error) {
+      console.error(`[RESEND ERROR] Failed to send email to ${recipientList.join(', ')}:`, error);
+      return { success: false, error: error.message || error };
+    }
+
+    console.log(`[RESEND EMAIL] Successfully sent email to ${recipientList.join(', ')} (ID: ${data.id})`);
+    return { success: true, messageId: data.id };
+  } catch (err) {
+    console.error(`[RESEND EXCEPTION] Exception sending email to ${recipientList.join(', ')}:`, err.message);
+    return { success: false, error: err.message };
+  }
 }
 
 /**
@@ -39,13 +60,11 @@ function getTransporter() {
  * @param {string} [options.name] - Recipient name
  */
 async function sendPasswordResetEmail({ to, resetUrl, name = 'Participant' }) {
-  try {
-    const transport = getTransporter();
-    const fullResetUrl = resetUrl.startsWith('http')
-      ? resetUrl
-      : `${config.FRONTEND_URL}${resetUrl}`;
+  const fullResetUrl = resetUrl.startsWith('http')
+    ? resetUrl
+    : `${config.FRONTEND_URL}${resetUrl}`;
 
-    const htmlContent = `
+  const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -136,23 +155,16 @@ async function sendPasswordResetEmail({ to, resetUrl, name = 'Participant' }) {
   </table>
 </body>
 </html>
-`;
+  `;
 
-    const mailOptions = {
-      from: config.SMTP.FROM,
-      to,
-      subject: 'COLORIDO 2K26 — Password Reset Request',
-      text: `Hello ${name},\n\nYou requested to reset your password for COLORIDO 2K26.\n\nPlease use the following link to reset your password:\n${fullResetUrl}\n\nThis link will expire in 20 minutes.\n\nIf you did not make this request, you can safely ignore this email.`,
-      html: htmlContent
-    };
+  const textContent = `Hello ${name},\n\nYou requested to reset your password for COLORIDO 2K26.\n\nPlease use the following link to reset your password:\n${fullResetUrl}\n\nThis link will expire in 20 minutes.\n\nIf you did not make this request, you can safely ignore this email.`;
 
-    const info = await transport.sendMail(mailOptions);
-    console.log(`[EMAIL] Password reset email sent successfully to ${to} (Message ID: ${info.messageId})`);
-    return { success: true, messageId: info.messageId };
-  } catch (err) {
-    console.error(`[EMAIL ERROR] Failed to send password reset email to ${to}:`, err.message);
-    return { success: false, error: err.message };
-  }
+  return await dispatchEmail({
+    to,
+    subject: 'COLORIDO 2K26 — Password Reset Request',
+    html: htmlContent,
+    text: textContent
+  });
 }
 
 /**
@@ -163,13 +175,11 @@ async function sendPasswordResetEmail({ to, resetUrl, name = 'Participant' }) {
  * @param {string} [options.name] - Recipient name
  */
 async function sendVerificationEmail({ to, verificationUrl, name = 'Participant' }) {
-  try {
-    const transport = getTransporter();
-    const fullVerifyUrl = verificationUrl.startsWith('http')
-      ? verificationUrl
-      : `${config.FRONTEND_URL}${verificationUrl}`;
+  const fullVerifyUrl = verificationUrl.startsWith('http')
+    ? verificationUrl
+    : `${config.FRONTEND_URL}${verificationUrl}`;
 
-    const htmlContent = `
+  const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -241,33 +251,23 @@ async function sendVerificationEmail({ to, verificationUrl, name = 'Participant'
   </table>
 </body>
 </html>
-    `;
+  `;
 
-    const mailOptions = {
-      from: config.SMTP.FROM,
-      to,
-      subject: 'Verify & Activate Your Account — COLORIDO 2K26',
-      text: `Hello ${name},\n\nThank you for creating an account for COLORIDO 2K26.\n\nPlease verify your email to activate your account by clicking:\n${fullVerifyUrl}\n\nThis link will expire in 24 hours.\n\nCOLORIDO 2K26 Team`,
-      html: htmlContent
-    };
+  const textContent = `Hello ${name},\n\nThank you for creating an account for COLORIDO 2K26.\n\nPlease verify your email to activate your account by clicking:\n${fullVerifyUrl}\n\nThis link will expire in 24 hours.\n\nCOLORIDO 2K26 Team`;
 
-    const info = await transport.sendMail(mailOptions);
-    console.log(`[EMAIL] Verification email sent to ${to}: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
-  } catch (error) {
-    console.error(`[EMAIL ERROR] Failed to send verification email to ${to}:`, error.message);
-    return { success: false, error: error.message };
-  }
+  return await dispatchEmail({
+    to,
+    subject: 'Verify & Activate Your Account — COLORIDO 2K26',
+    html: htmlContent,
+    text: textContent
+  });
 }
 
 /**
  * Send official reply email to visitor / participant contact message
  */
 async function sendContactReplyEmail({ to, recipientName, subject, replyText, originalSubject, originalMessage }) {
-  try {
-    const transport = getTransporter();
-
-    const htmlContent = `
+  const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -334,29 +334,23 @@ ${replyText}
   </table>
 </body>
 </html>
-    `;
+  `;
 
-    const mailOptions = {
-      from: config.SMTP.FROM,
-      to,
-      subject: subject || `Re: ${originalSubject} — COLORIDO 2K26 Helpdesk`,
-      text: `Hello ${recipientName},\n\nThank you for reaching out regarding "${originalSubject}".\n\nResponse:\n${replyText}\n\nOriginal Message:\n${originalMessage}\n\nCOLORIDO 2K26 Organizing Committee`,
-      html: htmlContent
-    };
+  const textContent = `Hello ${recipientName},\n\nThank you for reaching out regarding "${originalSubject}".\n\nResponse:\n${replyText}\n\nOriginal Message:\n${originalMessage}\n\nCOLORIDO 2K26 Organizing Committee`;
 
-    const info = await transport.sendMail(mailOptions);
-    console.log(`[EMAIL] Official contact reply sent to ${to}: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
-  } catch (error) {
-    console.error(`[EMAIL ERROR] Failed to send contact reply to ${to}:`, error.message);
-    return { success: false, error: error.message };
-  }
+  return await dispatchEmail({
+    to,
+    subject: subject || `Re: ${originalSubject} — COLORIDO 2K26 Helpdesk`,
+    html: htmlContent,
+    text: textContent
+  });
 }
 
 module.exports = {
   sendPasswordResetEmail,
   sendVerificationEmail,
   sendContactReplyEmail,
-  getTransporter
+  getResendClient,
+  // Alias for backwards-compatibility
+  getTransporter: getResendClient
 };
-
