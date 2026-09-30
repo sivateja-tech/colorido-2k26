@@ -32,6 +32,14 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
+// Automatically normalize duplicate /api/api prefixes if sent by any client or proxy
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api/api/')) {
+    req.url = req.url.replace(/^\/api\/api\//, '/api/');
+  }
+  next();
+});
+
 app.use('/api', apiLimiter);
 
 app.use('/api/health', healthRoutes);
