@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Trophy, Mail, Calendar, Plus,
   CheckCircle, CheckCircle2, Clock, Trash2, Search, RefreshCw, AlertCircle,
-  ArrowRight, QrCode, Layers, ChevronRight
+  ArrowRight, QrCode, Layers, ChevronRight, Zap, X
 } from 'lucide-react';
 import {
   fetchAdminDashboard,
@@ -14,6 +14,7 @@ import {
   createEvent,
   deleteEvent
 } from '../services/api';
+import { getAdminSocket } from '../services/socket';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 
 function CircularProgress({ percentage = 0, size = 56, strokeWidth = 5, color = '#10B981', trackColor = 'rgba(255,255,255,0.08)' }) {
@@ -57,6 +58,10 @@ export default function AdminDashboardPage() {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Real-time Socket.IO state
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+  const [liveNotification, setLiveNotification] = useState(null);
 
   // Registrations state
   const [registrations, setRegistrations] = useState([]);
@@ -138,6 +143,99 @@ export default function AdminDashboardPage() {
     loadDashboard();
   }, []);
 
+  // Real-time live dashboard sync
+  useEffect(() => {
+    const socket = getAdminSocket();
+    if (!socket) return;
+
+    const handleConnect = () => setIsLiveConnected(true);
+    const handleDisconnect = () => setIsLiveConnected(false);
+
+    setIsLiveConnected(socket.connected);
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+
+    const handleNewRegistration = (newReg) => {
+      // 1. Toast banner
+      setLiveNotification({
+        id: newReg.id,
+        text: `New Registration: ${newReg.fullName} registered for ${newReg.event?.title || 'an event'} (${newReg.registrationId})`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      });
+
+      setTimeout(() => {
+        setLiveNotification(prev => (prev?.id === newReg.id ? null : prev));
+      }, 7000);
+
+      // 2. Real-time metrics increment
+      setDashboardData(prev => {
+        if (!prev) return prev;
+        const metrics = prev.metrics || {};
+        const cat = newReg.event?.category;
+
+        const updatedMetrics = {
+          ...metrics,
+          totalRegistrations: (metrics.totalRegistrations || 0) + 1,
+          todayRegistrations: (metrics.todayRegistrations || 0) + 1,
+          confirmedRegistrations: (metrics.confirmedRegistrations || 0) + (newReg.status === 'CONFIRMED' ? 1 : 0),
+          activePasses: (metrics.activePasses || 0) + 1,
+          sportsRegistrations: (metrics.sportsRegistrations || 0) + (cat === 'SPORTS' ? 1 : 0),
+          culturalRegistrations: (metrics.culturalRegistrations || 0) + (cat === 'CULTURAL' ? 1 : 0),
+          technicalRegistrations: (metrics.technicalRegistrations || 0) + (cat === 'TECHNICAL' ? 1 : 0)
+        };
+
+        // Prepend to recentRegistrations
+        const existingRecent = prev.recentRegistrations || [];
+        const isDuplicate = existingRecent.some(r => r.id === newReg.id || r.registrationId === newReg.registrationId);
+        const updatedRecent = isDuplicate ? existingRecent : [newReg, ...existingRecent].slice(0, 10);
+
+        return {
+          ...prev,
+          metrics: updatedMetrics,
+          recentRegistrations: updatedRecent
+        };
+      });
+    };
+
+    const handleCheckInUpdate = (data) => {
+      setDashboardData(prev => {
+        if (!prev) return prev;
+        const metrics = prev.metrics || {};
+        const newCheckedIn = (metrics.checkedInRegistrations || 0) + 1;
+        const total = metrics.totalRegistrations || 1;
+        const newRate = Math.round((newCheckedIn / total) * 100);
+
+        const updatedRecent = (prev.recentRegistrations || []).map(r => {
+          if (r.id === data.id || r.registrationId === data.registrationId) {
+            return { ...r, checkedIn: true, status: 'CHECKED_IN' };
+          }
+          return r;
+        });
+
+        return {
+          ...prev,
+          metrics: {
+            ...metrics,
+            checkedInRegistrations: newCheckedIn,
+            checkInRate: newRate
+          },
+          recentRegistrations: updatedRecent
+        };
+      });
+    };
+
+    socket.on('admin:new_registration', handleNewRegistration);
+    socket.on('admin:check_in_update', handleCheckInUpdate);
+
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('admin:new_registration', handleNewRegistration);
+      socket.off('admin:check_in_update', handleCheckInUpdate);
+    };
+  }, []);
+
   useEffect(() => {
     if (activeTab === 'registrations') loadRegistrations();
     if (activeTab === 'messages') loadMessages();
@@ -202,9 +300,19 @@ export default function AdminDashboardPage() {
       {/* Top Banner & Refresh */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black font-display text-white">
-            Festival Operations Dashboard
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-black font-display text-white">
+              Festival Operations Dashboard
+            </h1>
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+              isLiveConnected
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${isLiveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              <span>{isLiveConnected ? 'Live Sync' : 'Connecting...'}</span>
+            </div>
+          </div>
           <p className="text-xs text-slate-400 mt-1">
             Real-time management for COLORIDO 2K26 tournaments, passes, and inquiries.
           </p>
@@ -217,6 +325,27 @@ export default function AdminDashboardPage() {
           <span>Refresh Metrics</span>
         </button>
       </div>
+
+      {/* Real-time Registration Toast Banner */}
+      {liveNotification && (
+        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-palette-blue/20 border-2 border-palette-blue/50 text-white text-xs shadow-xl animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-xl bg-palette-orange/20 border border-palette-orange/40 flex items-center justify-center text-palette-orange shrink-0">
+              <Zap className="w-4 h-4 animate-bounce" />
+            </div>
+            <div>
+              <span className="font-bold text-palette-clouds">{liveNotification.text}</span>
+              <span className="text-[10px] text-palette-clouds/60 ml-2 font-mono">({liveNotification.time})</span>
+            </div>
+          </div>
+          <button
+            onClick={() => setLiveNotification(null)}
+            className="p-1 rounded-lg text-palette-clouds/70 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Metrics Row with Direct Navigation */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -476,20 +605,31 @@ export default function AdminDashboardPage() {
             <div className="p-4 rounded-2xl bg-[#1A252F]/70 border border-[#95A5A6]/20 space-y-3">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-[#ECF0F1]">Festival Category Distribution</span>
-                <span className="text-[11px] text-[#95A5A6]">29 Total Events</span>
+                <span className="text-[11px] text-[#95A5A6]">
+                  {metrics.totalRegistrations || 0} Passes • 29 Events
+                </span>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
                 <div className="p-2.5 rounded-xl bg-[#2980B9]/15 border border-[#2980B9]/30">
-                  <div className="text-lg font-black text-[#2980B9] font-display">{metrics.sportsEvents || 9}</div>
+                  <div className="text-lg font-black text-[#2980B9] font-display">
+                    {metrics.sportsRegistrations ?? metrics.registrationsByCategory?.SPORTS ?? 0}
+                  </div>
                   <div className="text-[10px] uppercase font-bold text-[#ECF0F1]">Sports</div>
+                  <div className="text-[9px] text-[#95A5A6] mt-0.5">{metrics.sportsEvents || 9} Tournaments</div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-[#E67E22]/15 border border-[#E67E22]/30">
-                  <div className="text-lg font-black text-[#E67E22] font-display">{metrics.culturalEvents || 10}</div>
+                  <div className="text-lg font-black text-[#E67E22] font-display">
+                    {metrics.culturalRegistrations ?? metrics.registrationsByCategory?.CULTURAL ?? 0}
+                  </div>
                   <div className="text-[10px] uppercase font-bold text-[#ECF0F1]">Cultural</div>
+                  <div className="text-[9px] text-[#95A5A6] mt-0.5">{metrics.culturalEvents || 10} Stages</div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-[#3498DB]/15 border border-[#3498DB]/30">
-                  <div className="text-lg font-black text-[#3498DB] font-display">{metrics.technicalEvents || 10}</div>
+                  <div className="text-lg font-black text-[#3498DB] font-display">
+                    {metrics.technicalRegistrations ?? metrics.registrationsByCategory?.TECHNICAL ?? 0}
+                  </div>
                   <div className="text-[10px] uppercase font-bold text-[#ECF0F1]">Technical</div>
+                  <div className="text-[9px] text-[#95A5A6] mt-0.5">{metrics.technicalEvents || 10} Hackathons</div>
                 </div>
               </div>
             </div>

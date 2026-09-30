@@ -3,8 +3,10 @@ if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
 
+const http = require('http');
 const app = require('./src/app');
 const prisma = require('./src/services/prisma');
+const socketService = require('./src/services/socketService');
 
 const PORT = process.env.PORT || 5000;
 
@@ -13,7 +15,13 @@ async function startServer() {
     await prisma.$connect();
     console.log(' Successfully connected to PostgreSQL database (colorido2k26)');
 
-    const server = app.listen(PORT, () => {
+    const server = http.createServer(app);
+
+    // Attach Socket.IO
+    socketService.init(server);
+    console.log('⚡ Socket.IO initialized for real-time admin sync');
+
+    server.listen(PORT, () => {
       console.log(` COLORIDO 2K26 API server running on http://localhost:${PORT}`);
       console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
     });

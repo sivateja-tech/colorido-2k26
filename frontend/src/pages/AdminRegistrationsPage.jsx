@@ -3,7 +3,7 @@ import {
   Users, Search, Filter, RefreshCw, CheckCircle2, XCircle,
   Clock, AlertCircle, Eye, Download, X, ExternalLink, Ticket,
   Building, Mail, Phone, Hash, ShieldCheck, UserCheck, Check,
-  QrCode, Calendar, MapPin
+  QrCode, Calendar, MapPin, ChevronLeft, ChevronRight, Zap, Radio
 } from 'lucide-react';
 import {
   adminFetchRegistrations,
@@ -12,6 +12,7 @@ import {
   fetchPassById,
   adminCheckInParticipant
 } from '../services/api';
+import { getAdminSocket } from '../services/socket';
 import BackButton from '../components/BackButton';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 
@@ -22,11 +23,29 @@ export default function AdminRegistrationsPage() {
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
 
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    pageSize: 20,
+    totalItems: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false
+  });
+
   // Filters
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [eventFilter, setEventFilter] = useState('ALL');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [typeFilter, setTypeFilter] = useState('ALL');
+  const [checkInFilter, setCheckInFilter] = useState('ALL');
+
+  // Real-time State
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+  const [liveNotification, setLiveNotification] = useState(null);
 
   // Detail Modal
   const [selectedReg, setSelectedReg] = useState(null);
@@ -39,25 +58,33 @@ export default function AdminRegistrationsPage() {
   const [checkInMsg, setCheckInMsg] = useState(null);
   const [checkInError, setCheckInError] = useState(null);
 
-  const loadData = async () => {
+  const loadData = async (targetPage = page) => {
     try {
       setLoading(true);
       setError(null);
+      const params = {
+        page: targetPage,
+        limit,
+        search: search.trim() || undefined,
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        eventId: eventFilter !== 'ALL' ? eventFilter : undefined,
+        category: categoryFilter !== 'ALL' ? categoryFilter : undefined,
+        participantType: typeFilter !== 'ALL' ? typeFilter : undefined,
+        checkedIn: checkInFilter === 'CHECKED_IN' ? true : (checkInFilter === 'PENDING' ? false : undefined)
+      };
+
       const [regRes, evRes] = await Promise.all([
-        adminFetchRegistrations({
-          search: search || undefined,
-          status: statusFilter !== 'ALL' ? statusFilter : undefined,
-          eventId: eventFilter !== 'ALL' ? eventFilter : undefined,
-          participantType: typeFilter !== 'ALL' ? typeFilter : undefined,
-          limit: 100,
-        }),
-        adminFetchEvents()
+        adminFetchRegistrations(params),
+        events.length === 0 ? adminFetchEvents() : Promise.resolve(null)
       ]);
 
       if (regRes.data?.success) {
         setRegistrations(regRes.data.data || []);
+        if (regRes.data.pagination) {
+          setPagination(regRes.data.pagination);
+        }
       }
-      if (evRes.data?.success) {
+      if (evRes?.data?.success) {
         setEvents(evRes.data.data || []);
       }
     } catch (err) {
@@ -68,12 +95,113 @@ export default function AdminRegistrationsPage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, [statusFilter, eventFilter, typeFilter]);
+    loadData(page);
+  }, [page, limit, statusFilter, eventFilter, categoryFilter, typeFilter, checkInFilter]);
+
+  // Real-time Socket.IO sync
+  useEffect(() => {
+    const socket = getAdminSocket();
+    if (!socket) return;
+
+    const handleConnect = () => setIsLiveConnected(true);
+    const handleDisconnect = () => setIsLiveConnected(false);
+
+    setIsLiveConnected(socket.connected);
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+
+    const handleNewRegistration = (newReg) => {
+      // 1. Show live banner notification
+      setLiveNotification({
+        id: newReg.id,
+        text: `New Registration: ${newReg.fullName} registered for ${newReg.event?.title || 'an event'} (${newReg.registrationId})`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      });
+
+      // Auto dismiss after 7 seconds
+      setTimeout(() => {
+        setLiveNotification(prev => (prev?.id === newReg.id ? null : prev));
+      }, 7000);
+
+      // 2. Safely update total count
+      setPagination(prev => {
+        const newTotal = (prev.totalItems || 0) + 1;
+        const newPages = Math.max(1, Math.ceil(newTotal / prev.pageSize));
+        return {
+          ...prev,
+          totalItems: newTotal,
+          totalPages: newPages,
+          hasNextPage: prev.currentPage < newPages
+        };
+      });
+
+      // 3. If on page 1 with matching filters, prepend to table
+      const matchesSearch = !search.trim() ||
+        newReg.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+        newReg.registrationId?.toLowerCase().includes(search.toLowerCase()) ||
+        newReg.email?.toLowerCase().includes(search.toLowerCase());
+      const matchesEvent = eventFilter === 'ALL' || newReg.event?.id === eventFilter;
+      const matchesCategory = categoryFilter === 'ALL' || newReg.event?.category === categoryFilter;
+      const matchesType = typeFilter === 'ALL' || newReg.participantType === typeFilter;
+      const matchesStatus = statusFilter === 'ALL' || newReg.status === statusFilter;
+
+      if (page === 1 && matchesSearch && matchesEvent && matchesCategory && matchesType && matchesStatus) {
+        setRegistrations(prev => {
+          if (prev.some(r => r.id === newReg.id || r.registrationId === newReg.registrationId)) {
+            return prev;
+          }
+          const updated = [newReg, ...prev];
+          return updated.slice(0, limit);
+        });
+      }
+    };
+
+    const handleCheckInUpdate = (data) => {
+      setRegistrations(prev => prev.map(r => {
+        if (r.id === data.id || r.registrationId === data.registrationId) {
+          return {
+            ...r,
+            checkedIn: data.checkedIn,
+            checkedInAt: data.checkedInAt,
+            status: data.status || 'CHECKED_IN'
+          };
+        }
+        return r;
+      }));
+    };
+
+    const handleStatusUpdate = (data) => {
+      setRegistrations(prev => prev.map(r => {
+        if (r.id === data.id || r.registrationId === data.registrationId) {
+          return {
+            ...r,
+            status: data.status,
+            checkedIn: data.checkedIn !== undefined ? data.checkedIn : r.checkedIn,
+            checkedInAt: data.checkedInAt !== undefined ? data.checkedInAt : r.checkedInAt
+          };
+        }
+        return r;
+      }));
+    };
+
+    socket.on('admin:new_registration', handleNewRegistration);
+    socket.on('admin:check_in_update', handleCheckInUpdate);
+    socket.on('admin:status_update', handleStatusUpdate);
+
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('admin:new_registration', handleNewRegistration);
+      socket.off('admin:check_in_update', handleCheckInUpdate);
+      socket.off('admin:status_update', handleStatusUpdate);
+    };
+  }, [page, limit, search, eventFilter, categoryFilter, typeFilter, statusFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    loadData();
+    setPage(1);
+    loadData(1);
   };
 
   // Quick verify participant from ID
@@ -266,6 +394,15 @@ export default function AdminRegistrationsPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-colors ${
+            isLiveConnected
+              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+              : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${isLiveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            <span>{isLiveConnected ? 'Live Sync Active' : 'Connecting...'}</span>
+          </div>
+
           <button
             onClick={exportCSV}
             disabled={registrations.length === 0}
@@ -275,7 +412,7 @@ export default function AdminRegistrationsPage() {
             <span>Export CSV</span>
           </button>
           <button
-            onClick={loadData}
+            onClick={() => loadData(page)}
             disabled={loading}
             className="p-2.5 rounded-xl bg-dark-elevated dark:bg-dark-elevated light:bg-light-surface-secondary border border-dark-border dark:border-dark-border light:border-light-border text-dark-text-secondary hover:text-dark-text transition-colors"
             title="Reload Roster"
@@ -284,6 +421,27 @@ export default function AdminRegistrationsPage() {
           </button>
         </div>
       </div>
+
+      {/* Real-time Registration Toast Banner */}
+      {liveNotification && (
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-palette-blue/20 border-2 border-palette-blue/50 text-white text-xs shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-lg bg-palette-orange/20 border border-palette-orange/40 flex items-center justify-center text-palette-orange shrink-0">
+              <Zap className="w-3.5 h-3.5 animate-bounce" />
+            </div>
+            <div>
+              <span className="font-bold text-palette-clouds">{liveNotification.text}</span>
+              <span className="text-[10px] text-palette-clouds/60 ml-2 font-mono">({liveNotification.time})</span>
+            </div>
+          </div>
+          <button
+            onClick={() => setLiveNotification(null)}
+            className="p-1 rounded-md text-palette-clouds/70 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* MOBILE ADMIN CHECK-IN PORTAL / GATE SCANNER FLOW */}
       <div className="bg-gradient-to-br from-palette-midnight via-palette-midnight to-palette-blue/20 p-5 sm:p-6 rounded-2xl border-2 border-palette-blue/40 shadow-lg space-y-4">
@@ -499,15 +657,15 @@ export default function AdminRegistrationsPage() {
       )}
 
       {/* Filter and Search Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 bg-dark-surface dark:bg-dark-surface light:bg-light-surface p-4 rounded-2xl border border-dark-border dark:border-dark-border light:border-light-border">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 bg-dark-surface dark:bg-dark-surface light:bg-light-surface p-4 rounded-2xl border border-dark-border dark:border-dark-border light:border-light-border">
         {/* Search */}
-        <form onSubmit={handleSearchSubmit} className="sm:col-span-2 md:col-span-2 relative">
+        <form onSubmit={handleSearchSubmit} className="sm:col-span-2 lg:col-span-2 relative">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-muted" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search participant, captain, reg ID, team..."
+            placeholder="Search participant, captain, reg ID, team, email..."
             className="w-full pl-10 pr-20 py-2 rounded-xl text-xs bg-dark-bg dark:bg-dark-bg light:bg-light-bg border border-dark-border dark:border-dark-border light:border-light-border text-dark-text dark:text-dark-text light:text-light-text placeholder:text-dark-muted focus:outline-none focus:border-palette-blue"
           />
           <button
@@ -518,11 +676,31 @@ export default function AdminRegistrationsPage() {
           </button>
         </form>
 
+        {/* Filter by Category */}
+        <div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value);
+              setPage(1);
+            }}
+            className="w-full px-3 py-2 rounded-xl text-xs bg-dark-bg dark:bg-dark-bg light:bg-light-bg border border-dark-border dark:border-dark-border light:border-light-border text-dark-text dark:text-dark-text light:text-light-text focus:outline-none focus:border-palette-blue"
+          >
+            <option value="ALL">All Categories</option>
+            <option value="SPORTS">Sports</option>
+            <option value="CULTURAL">Cultural</option>
+            <option value="TECHNICAL">Technical</option>
+          </select>
+        </div>
+
         {/* Filter by Event */}
         <div>
           <select
             value={eventFilter}
-            onChange={(e) => setEventFilter(e.target.value)}
+            onChange={(e) => {
+              setEventFilter(e.target.value);
+              setPage(1);
+            }}
             className="w-full px-3 py-2 rounded-xl text-xs bg-dark-bg dark:bg-dark-bg light:bg-light-bg border border-dark-border dark:border-dark-border light:border-light-border text-dark-text dark:text-dark-text light:text-light-text focus:outline-none focus:border-palette-blue"
           >
             <option value="ALL">All Events ({events.length})</option>
@@ -534,30 +712,36 @@ export default function AdminRegistrationsPage() {
           </select>
         </div>
 
-        {/* Filter by Type */}
+        {/* Filter by Format / Type */}
         <div>
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
+            onChange={(e) => {
+              setTypeFilter(e.target.value);
+              setPage(1);
+            }}
             className="w-full px-3 py-2 rounded-xl text-xs bg-dark-bg dark:bg-dark-bg light:bg-light-bg border border-dark-border dark:border-dark-border light:border-light-border text-dark-text dark:text-dark-text light:text-light-text focus:outline-none focus:border-palette-blue"
           >
-            <option value="ALL">All Formats (Solo &amp; Team)</option>
-            <option value="INDIVIDUAL">INDIVIDUAL</option>
-            <option value="GROUP">GROUP</option>
-            <option value="TEAM">TEAM</option>
+            <option value="ALL">All Formats</option>
+            <option value="INDIVIDUAL">Solo (Individual)</option>
+            <option value="GROUP">Group Squad</option>
+            <option value="TEAM">Large Team</option>
           </select>
         </div>
 
-        {/* Filter by Status */}
+        {/* Filter by Status & Gate Check-in */}
         <div>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
             className="w-full px-3 py-2 rounded-xl text-xs bg-dark-bg dark:bg-dark-bg light:bg-light-bg border border-dark-border dark:border-dark-border light:border-light-border text-dark-text dark:text-dark-text light:text-light-text focus:outline-none focus:border-palette-blue"
           >
             <option value="ALL">All Statuses</option>
             <option value="CONFIRMED">CONFIRMED</option>
-            <option value="CHECKED_IN">CHECKED_IN</option>
+            <option value="CHECKED_IN">CHECKED_IN (Gate Entered)</option>
             <option value="PENDING">PENDING</option>
             <option value="REJECTED">REJECTED</option>
             <option value="CANCELLED">CANCELLED</option>
@@ -774,6 +958,89 @@ export default function AdminRegistrationsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          {/* SERVER-SIDE PAGINATION CONTROLS */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-dark-surface dark:bg-dark-surface light:bg-light-surface border border-dark-border dark:border-dark-border light:border-light-border text-xs shadow-sm">
+            {/* Left: Summary Count & Page Size Selector */}
+            <div className="flex flex-wrap items-center gap-3 text-dark-muted">
+              <span>
+                Showing{' '}
+                <strong className="text-dark-text dark:text-dark-text light:text-light-text font-bold">
+                  {pagination.totalItems === 0 ? 0 : (page - 1) * limit + 1}
+                </strong>
+                {' '}to{' '}
+                <strong className="text-dark-text dark:text-dark-text light:text-light-text font-bold">
+                  {Math.min(page * limit, pagination.totalItems)}
+                </strong>
+                {' '}of{' '}
+                <strong className="text-palette-blue font-bold">
+                  {pagination.totalItems.toLocaleString()}
+                </strong>
+                {' '}registrations
+              </span>
+
+              <div className="flex items-center gap-1.5 pl-3 border-l border-dark-border">
+                <span>Per page:</span>
+                <select
+                  value={limit}
+                  onChange={(e) => {
+                    const newLimit = parseInt(e.target.value, 10);
+                    setLimit(newLimit);
+                    setPage(1);
+                  }}
+                  className="px-2 py-1 rounded-lg bg-dark-bg dark:bg-dark-bg light:bg-light-bg border border-dark-border text-dark-text cursor-pointer focus:outline-none focus:border-palette-blue"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Right: Page Navigation Buttons */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPage(1)}
+                disabled={page === 1 || loading}
+                className="px-2.5 py-1.5 rounded-lg border border-dark-border bg-dark-elevated text-dark-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-dark-border transition-colors font-medium text-[11px]"
+                title="First Page"
+              >
+                « First
+              </button>
+
+              <button
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={!pagination.hasPreviousPage || loading}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-dark-border bg-dark-elevated text-dark-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-dark-border transition-colors font-medium text-[11px]"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Previous</span>
+              </button>
+
+              <div className="px-3 py-1.5 rounded-lg bg-palette-blue/15 border border-palette-blue/30 text-palette-blue font-bold font-mono text-[11px]">
+                Page {page} of {pagination.totalPages || 1}
+              </div>
+
+              <button
+                onClick={() => setPage((prev) => Math.min(pagination.totalPages || 1, prev + 1))}
+                disabled={!pagination.hasNextPage || loading}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-dark-border bg-dark-elevated text-dark-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-dark-border transition-colors font-medium text-[11px]"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={() => setPage(pagination.totalPages || 1)}
+                disabled={page >= pagination.totalPages || loading}
+                className="px-2.5 py-1.5 rounded-lg border border-dark-border bg-dark-elevated text-dark-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-dark-border transition-colors font-medium text-[11px]"
+                title="Last Page"
+              >
+                Last »
+              </button>
             </div>
           </div>
         </>

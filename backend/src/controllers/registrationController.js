@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const prisma = require('../services/prisma');
 const config = require('../config');
+const socketService = require('../services/socketService');
 
 function generateRegistrationId() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -13,6 +14,21 @@ function generateRegistrationId() {
 
 function generateVerificationCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function parseFestivalEventDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  // Handle formats like "October 15-16, 2026" or "October 15, 2026" or "2026-10-15"
+  const rangeMatch = dateStr.match(/([a-zA-Z]+)\s+(\d+)(?:\s*[-–]\s*(\d+))?,\s*(\d{4})/);
+  if (rangeMatch) {
+    const month = rangeMatch[1];
+    const endDay = rangeMatch[3] || rangeMatch[2];
+    const year = rangeMatch[4];
+    const parsed = new Date(`${month} ${endDay}, ${year}`);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  const fallback = new Date(dateStr);
+  return isNaN(fallback.getTime()) ? null : fallback;
 }
 
 /**
@@ -80,8 +96,8 @@ async function createRegistration(req, res, next) {
 
     // Check if event date has already passed
     if (event.date) {
-      const eventDateParsed = new Date(event.date);
-      if (!isNaN(eventDateParsed.getTime())) {
+      const eventDateParsed = parseFestivalEventDate(event.date);
+      if (eventDateParsed) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         if (eventDateParsed < today) {
@@ -96,10 +112,8 @@ async function createRegistration(req, res, next) {
     // Determine effective registration type: INDIVIDUAL, GROUP, or TEAM
     const effectiveType = (
       registrationType ||
-      event.registrationType ||
       participantType ||
-      event.participantType ||
-      'INDIVIDUAL'
+      (event.participantType && event.participantType !== 'INDIVIDUAL' ? event.participantType : (event.registrationType || 'INDIVIDUAL'))
     ).toUpperCase();
 
     // Parse additional team/group members
@@ -336,6 +350,9 @@ async function createRegistration(req, res, next) {
       throw txError;
     }
 
+    // Real-time notification to authorized admins via Socket.IO
+    socketService.emitAdminRegistration(registration);
+
     res.status(201).json({
       success: true,
       message: 'Registration confirmed successfully!',
@@ -441,32 +458,60 @@ async function getRegistrationById(req, res, next) {
 /**
  * Admin: Get ALL registrations with search, filter, pagination
  */
+/**
+ * Admin: Get ALL registrations with search, filter, and server-side pagination
+ */
 async function getAllRegistrations(req, res, next) {
   try {
-    const { search, eventId, category, status, participantType, page = 1, limit = 50 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const take = parseInt(limit);
+    const {
+      search,
+      eventId,
+      category,
+      status,
+      participantType,
+      checkedIn,
+      page = 1,
+      limit = 20
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    // Cap limit at 100 to prevent database exhaustion
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20));
+    const skip = (pageNum - 1) * limitNum;
+    const take = limitNum;
+
     const where = {};
 
-    if (eventId) {
+    if (eventId && eventId !== 'ALL') {
       where.eventId = eventId;
     }
 
-    if (category) {
+    if (category && category !== 'ALL') {
       where.event = { category: category.toUpperCase() };
     }
 
-    if (status) {
-      where.status = status.toUpperCase();
+    if (status && status !== 'ALL') {
+      if (status.toUpperCase() === 'CHECKED_IN') {
+        where.OR = [
+          { status: 'CHECKED_IN' },
+          { checkedIn: true }
+        ];
+      } else {
+        where.status = status.toUpperCase();
+      }
     }
 
-    if (participantType) {
+    if (checkedIn !== undefined && checkedIn !== null && checkedIn !== '' && checkedIn !== 'ALL') {
+      where.checkedIn = checkedIn === 'true' || checkedIn === true;
+    }
+
+    if (participantType && participantType !== 'ALL') {
       where.participantType = participantType.toUpperCase();
     }
 
     if (search && search.trim()) {
       const q = search.trim();
-      where.OR = [
+      const searchConditions = [
         { registrationId: { contains: q, mode: 'insensitive' } },
         { fullName: { contains: q, mode: 'insensitive' } },
         { email: { contains: q, mode: 'insensitive' } },
@@ -476,9 +521,19 @@ async function getAllRegistrations(req, res, next) {
         { event: { title: { contains: q, mode: 'insensitive' } } },
         { participants: { some: { name: { contains: q, mode: 'insensitive' } } } }
       ];
+
+      if (where.OR) {
+        where.AND = [
+          { OR: where.OR },
+          { OR: searchConditions }
+        ];
+        delete where.OR;
+      } else {
+        where.OR = searchConditions;
+      }
     }
 
-    const [registrations, total] = await Promise.all([
+    const [registrations, totalItems] = await Promise.all([
       prisma.registration.findMany({
         where,
         skip,
@@ -503,14 +558,31 @@ async function getAllRegistrations(req, res, next) {
       prisma.registration.count({ where })
     ]);
 
+    const totalPages = Math.max(1, Math.ceil(totalItems / limitNum));
+    const hasNextPage = pageNum < totalPages;
+    const hasPreviousPage = pageNum > 1;
+
     res.json({
       success: true,
       data: registrations,
+      registrations,
+      currentPage: pageNum,
+      pageSize: limitNum,
+      totalItems,
+      totalPages,
+      hasNextPage,
+      hasPreviousPage,
       pagination: {
-        total,
-        page: parseInt(page),
-        limit: take,
-        pages: Math.ceil(total / take)
+        currentPage: pageNum,
+        pageSize: limitNum,
+        totalItems,
+        totalPages,
+        hasNextPage,
+        hasPreviousPage,
+        page: pageNum,
+        limit: limitNum,
+        total: totalItems,
+        pages: totalPages
       }
     });
   } catch (err) {
@@ -553,6 +625,9 @@ async function updateRegistrationStatus(req, res, next) {
         }
       }
     });
+
+    // Real-time notification to authorized admins
+    socketService.emitAdminStatusUpdate(updated);
 
     res.json({
       success: true,
@@ -631,6 +706,9 @@ async function checkInParticipant(req, res, next) {
         user: true
       }
     });
+
+    // Real-time notification to authorized admins
+    socketService.emitAdminCheckIn(updated);
 
     res.json({
       success: true,

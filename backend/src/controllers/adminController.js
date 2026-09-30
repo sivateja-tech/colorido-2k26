@@ -23,6 +23,9 @@ async function getDashboardStats(req, res, next) {
       checkedInRegistrations,
       pendingRegistrations,
       cancelledRegistrations,
+      sportsRegistrations,
+      culturalRegistrations,
+      technicalRegistrations,
       upcomingEvents,
       publishedResults,
       unreadMessages,
@@ -39,6 +42,9 @@ async function getDashboardStats(req, res, next) {
       prisma.registration.count({ where: { OR: [{ checkedIn: true }, { status: 'CHECKED_IN' }] } }),
       prisma.registration.count({ where: { status: 'PENDING' } }),
       prisma.registration.count({ where: { status: 'CANCELLED' } }),
+      prisma.registration.count({ where: { event: { category: 'SPORTS' } } }),
+      prisma.registration.count({ where: { event: { category: 'CULTURAL' } } }),
+      prisma.registration.count({ where: { event: { category: 'TECHNICAL' } } }),
       prisma.event.count({ where: { published: true } }),
       prisma.result.count({ where: { published: true } }),
       prisma.contactMessage.count({ where: { status: 'UNREAD' } }),
@@ -60,7 +66,7 @@ async function getDashboardStats(req, res, next) {
         take: 10
       }),
       prisma.registration.findMany({
-        take: 8,
+        take: 12,
         orderBy: { createdAt: 'desc' },
         include: {
           event: {
@@ -94,6 +100,14 @@ async function getDashboardStats(req, res, next) {
           checkInRate,
           pendingRegistrations,
           cancelledRegistrations,
+          sportsRegistrations,
+          culturalRegistrations,
+          technicalRegistrations,
+          registrationsByCategory: {
+            SPORTS: sportsRegistrations,
+            CULTURAL: culturalRegistrations,
+            TECHNICAL: technicalRegistrations
+          },
           upcomingEvents,
           publishedResults,
           unreadMessages,
