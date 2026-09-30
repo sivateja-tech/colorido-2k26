@@ -36,13 +36,78 @@ function getTransporter() {
 }
 
 /**
- * Helper to dispatch email via Nodemailer Gmail SMTP with automatic HTTP API fallback
+ * Dispatch email via Brevo REST API (HTTPS Port 443 - 100% unblocked on Render free tier)
+ */
+async function sendViaBrevo({ to, subject, html, text }) {
+  if (!config.BREVO_API_KEY) return null;
+
+  const recipients = (Array.isArray(to) ? to : [to]).map(recipient => {
+    if (typeof recipient === 'string') {
+      return { email: recipient.trim() };
+    }
+    return recipient;
+  });
+
+  const senderEmail = config.SMTP?.USER || 'hackerbot2005@gmail.com';
+  const senderName = 'COLORIDO 2K26';
+
+  const payload = {
+    sender: {
+      name: senderName,
+      email: senderEmail
+    },
+    to: recipients,
+    subject,
+    htmlContent: html,
+    textContent: text || ''
+  };
+
+  try {
+    console.log(`[BREVO API ATTEMPT] Sending email to ${recipients.map(r => r.email).join(', ')} via Brevo HTTP API (Port 443)...`);
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'api-key': config.BREVO_API_KEY.trim()
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok && data.messageId) {
+      console.log(`[BREVO API SUCCESS] Delivered email to ${recipients.map(r => r.email).join(', ')} (Message ID: ${data.messageId})`);
+      return { success: true, messageId: data.messageId, provider: 'brevo' };
+    } else {
+      const errorMsg = data.message || data.error || `HTTP ${response.status}: ${response.statusText}`;
+      console.warn(`[BREVO API WARNING] Brevo delivery failed: ${errorMsg}`);
+      return { success: false, error: errorMsg };
+    }
+  } catch (err) {
+    console.error(`[BREVO API EXCEPTION] ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Helper to dispatch email with multi-tier routing (Brevo API -> Gmail SMTP -> Resend API)
  */
 async function dispatchEmail({ to, subject, html, text }) {
   const recipientList = Array.isArray(to) ? to.join(', ') : to;
   const fromAddress = config.SMTP.FROM || config.EMAIL_FROM || 'COLORIDO 2K26 <hackerbot2005@gmail.com>';
 
-  // Attempt 1: Gmail SMTP via Nodemailer
+  // Tier 1: Brevo REST API over HTTPS Port 443 (Recommended for Render free tier)
+  if (config.BREVO_API_KEY) {
+    const brevoResult = await sendViaBrevo({ to, subject, html, text });
+    if (brevoResult && brevoResult.success) {
+      return brevoResult;
+    }
+    console.warn(`[BREVO NOTICE] Brevo did not deliver. Falling back to next available provider...`);
+  }
+
+  // Tier 2: Gmail SMTP via Nodemailer (Port 465)
   try {
     const transport = getTransporter();
     console.log(`[SMTP ATTEMPT] Sending email to ${recipientList} via ${config.SMTP.HOST}:${config.SMTP.PORT}...`);
@@ -60,7 +125,7 @@ async function dispatchEmail({ to, subject, html, text }) {
   } catch (smtpErr) {
     console.warn(`[SMTP BLOCKED/FAILED] ${smtpErr.message}. Checking HTTP API fallback (Port 443)...`);
 
-    // Attempt 2: Resend HTTP REST API over Port 443 (Render free tier unblocked)
+    // Tier 3: Resend HTTP REST API over Port 443
     const resend = getResend();
     if (resend) {
       try {
@@ -86,7 +151,7 @@ async function dispatchEmail({ to, subject, html, text }) {
 
     return {
       success: false,
-      error: `SMTP connection failed (${smtpErr.message}). Note: Render free tier blocks outbound SMTP ports 465/587.`
+      error: `Delivery failed. SMTP: ${smtpErr.message}. Configure BREVO_API_KEY in Render to bypass port blocks.`
     };
   }
 }
