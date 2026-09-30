@@ -344,17 +344,26 @@ async function registerUser(req, res, next) {
  */
 async function verifyEmail(req, res, next) {
   try {
-    const token = req.query.token || req.body?.token;
-    if (!token || typeof token !== 'string') {
+    const rawToken = req.query.token || req.body?.token;
+    if (!rawToken || typeof rawToken !== 'string') {
       return res.status(400).json({
         success: false,
         message: 'Verification token is required.'
       });
     }
 
-    const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
-    const record = await prisma.emailVerification.findUnique({
-      where: { tokenHash }
+    const cleanToken = rawToken.replace(/^["'<(\[]+|[>"')\]/\s]+$/g, '').trim();
+    const hexMatch = cleanToken.match(/[0-9a-fA-F]{64}/);
+    const effectiveToken = hexMatch ? hexMatch[0] : cleanToken;
+    const tokenHash = crypto.createHash('sha256').update(effectiveToken).digest('hex');
+
+    const record = await prisma.emailVerification.findFirst({
+      where: {
+        OR: [
+          { tokenHash },
+          { tokenHash: effectiveToken }
+        ]
+      }
     });
 
     if (!record) {
@@ -519,7 +528,7 @@ async function forgotPassword(req, res, next) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check rate limit (60-second cooldown)
+    // Check rate limit (60-second cooldown per email)
     const recentReset = await prisma.passwordReset.findFirst({
       where: { email: normalizedEmail },
       orderBy: { createdAt: 'desc' }
@@ -555,18 +564,12 @@ async function forgotPassword(req, res, next) {
       });
     }
 
-    // Invalidate existing unused tokens for this email
-    await prisma.passwordReset.updateMany({
-      where: { email: normalizedEmail, used: false },
-      data: { used: true }
-    });
-
-    // Generate cryptographically secure token
+    // Generate cryptographically secure token (64 hex characters)
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
-    // Expires in 20 minutes
-    const expiresAt = new Date(Date.now() + 20 * 60 * 1000);
+    // Token expires in 60 minutes
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     await prisma.passwordReset.create({
       data: {
@@ -578,15 +581,29 @@ async function forgotPassword(req, res, next) {
       }
     });
 
+    // Detect client base URL dynamically from request headers or environment config
+    let clientOrigin = req.headers.origin;
+    if (!clientOrigin && req.headers.referer) {
+      try {
+        clientOrigin = new URL(req.headers.referer).origin;
+      } catch (e) {
+        clientOrigin = null;
+      }
+    }
+    const baseUrl = (clientOrigin || config.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+    const fullResetUrl = `${baseUrl}/reset-password?token=${rawToken}`;
     const targetName = admin?.name || user?.name || 'Participant';
-    const resetPath = `/reset-password?token=${rawToken}`;
 
     // Dispatch password reset email
-    await sendPasswordResetEmail({
+    const emailResult = await sendPasswordResetEmail({
       to: normalizedEmail,
-      resetUrl: resetPath,
+      resetUrl: fullResetUrl,
       name: targetName
     });
+
+    if (!emailResult.success) {
+      console.error(`[FORGOT PASSWORD] Email dispatch failed:`, emailResult.error);
+    }
 
     return res.json({
       success: true,
@@ -600,35 +617,56 @@ async function forgotPassword(req, res, next) {
 /**
  * VERIFY RESET TOKEN
  * Checks if token is valid, unused, and not expired.
+ * Sanitizes input and supports both direct hash and raw token matching.
  */
 async function verifyResetToken(req, res, next) {
   try {
-    const { token } = req.query;
+    const rawToken = req.query.token || req.body?.token;
 
-    if (!token) {
+    if (!rawToken || typeof rawToken !== 'string') {
       return res.status(400).json({
         success: false,
         message: 'Password reset token is missing.'
       });
     }
 
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    // Clean any surrounding quotes, brackets, whitespace, trailing slashes, or hashes
+    const cleanToken = rawToken.replace(/^["'<(\[]+|[>"')\]/\s]+$/g, '').trim();
+    const hexMatch = cleanToken.match(/[0-9a-fA-F]{64}/);
+    const effectiveToken = hexMatch ? hexMatch[0] : cleanToken;
 
-    const resetRecord = await prisma.passwordReset.findUnique({
-      where: { tokenHash }
+    const tokenHash = crypto.createHash('sha256').update(effectiveToken).digest('hex');
+
+    const resetRecord = await prisma.passwordReset.findFirst({
+      where: {
+        OR: [
+          { tokenHash },
+          { tokenHash: effectiveToken }
+        ]
+      }
     });
 
-    if (!resetRecord || resetRecord.used) {
+    if (!resetRecord) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or already-used password reset token.'
+        invalid: true,
+        message: 'Invalid or unrecognized password reset token. Please request a new link.'
+      });
+    }
+
+    if (resetRecord.used) {
+      return res.status(400).json({
+        success: false,
+        alreadyUsed: true,
+        message: 'This password reset link has already been used. Please request a new one if you need to reset again.'
       });
     }
 
     if (new Date() > new Date(resetRecord.expiresAt)) {
       return res.status(400).json({
         success: false,
-        message: 'Password reset token has expired. Please request a new one.'
+        expired: true,
+        message: 'Password reset token has expired. Password reset links are valid for 60 minutes. Please request a new one.'
       });
     }
 
@@ -645,18 +683,25 @@ async function verifyResetToken(req, res, next) {
 
 /**
  * RESET PASSWORD — USER AND ADMIN (Section: AUTHENTICATION — FINAL DESIGN)
- * Validates token, hashes new password with bcrypt, updates account, and invalidates token.
+ * Validates token, hashes new password with bcrypt, updates account, and atomically invalidates all active reset tokens.
  */
 async function resetPassword(req, res, next) {
   try {
-    const token = req.body.token;
-    const newPassword = req.body.newPassword || req.body.password;
-    const confirmPassword = req.body.confirmPassword;
+    const rawToken = req.body?.token || req.query?.token;
+    const newPassword = req.body?.newPassword || req.body?.password;
+    const confirmPassword = req.body?.confirmPassword;
 
-    if (!token || !newPassword) {
+    if (!rawToken || typeof rawToken !== 'string') {
       return res.status(400).json({
         success: false,
-        message: 'Token and new password are required.'
+        message: 'Password reset token is required.'
+      });
+    }
+
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password is required.'
       });
     }
 
@@ -674,22 +719,42 @@ async function resetPassword(req, res, next) {
       });
     }
 
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    // Clean any surrounding quotes, brackets, whitespace, trailing slashes, or hashes
+    const cleanToken = rawToken.replace(/^["'<(\[]+|[>"')\]/\s]+$/g, '').trim();
+    const hexMatch = cleanToken.match(/[0-9a-fA-F]{64}/);
+    const effectiveToken = hexMatch ? hexMatch[0] : cleanToken;
 
-    const resetRecord = await prisma.passwordReset.findUnique({
-      where: { tokenHash }
+    const tokenHash = crypto.createHash('sha256').update(effectiveToken).digest('hex');
+
+    const resetRecord = await prisma.passwordReset.findFirst({
+      where: {
+        OR: [
+          { tokenHash },
+          { tokenHash: effectiveToken }
+        ]
+      }
     });
 
-    if (!resetRecord || resetRecord.used) {
+    if (!resetRecord) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or already-used password reset token.'
+        invalid: true,
+        message: 'Invalid or unrecognized password reset token.'
+      });
+    }
+
+    if (resetRecord.used) {
+      return res.status(400).json({
+        success: false,
+        alreadyUsed: true,
+        message: 'This password reset link has already been used. Please request a new one.'
       });
     }
 
     if (new Date() > new Date(resetRecord.expiresAt)) {
       return res.status(400).json({
         success: false,
+        expired: true,
         message: 'Password reset token has expired. Please request a new one.'
       });
     }
@@ -697,22 +762,26 @@ async function resetPassword(req, res, next) {
     // Hash new password with bcrypt
     const newHash = await bcrypt.hash(newPassword, 10);
 
-    // Update account based on userType
-    if (resetRecord.userType === 'ADMIN') {
+    // Update account in both Admin and User tables if matching
+    const adminAccount = await prisma.admin.findUnique({ where: { email: resetRecord.email } });
+    if (adminAccount) {
       await prisma.admin.update({
         where: { email: resetRecord.email },
         data: { passwordHash: newHash }
       });
-    } else {
+    }
+
+    const userAccount = await prisma.user.findUnique({ where: { email: resetRecord.email } });
+    if (userAccount) {
       await prisma.user.update({
         where: { email: resetRecord.email },
         data: { passwordHash: newHash }
       });
     }
 
-    // Invalidate the token so it cannot be reused
-    await prisma.passwordReset.update({
-      where: { id: resetRecord.id },
+    // Atomically invalidate ALL active password reset tokens for this email
+    await prisma.passwordReset.updateMany({
+      where: { email: resetRecord.email, used: false },
       data: { used: true }
     });
 

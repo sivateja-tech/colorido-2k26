@@ -160,7 +160,7 @@ export default function ForgotPasswordPage() {
                 </div>
 
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Please check your inbox (and spam or junk folder) for instructions to reset your password. The link expires in <strong>20 minutes</strong>.
+                  Please check your inbox (and spam or junk folder) for instructions to reset your password. The link expires in <strong>60 minutes</strong>.
                 </p>
               </div>
 

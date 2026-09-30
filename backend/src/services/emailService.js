@@ -84,9 +84,11 @@ async function dispatchEmail({ to, subject, html, text }) {
  * @param {string} [options.name] - Recipient name
  */
 async function sendPasswordResetEmail({ to, resetUrl, name = 'Participant' }) {
+  const baseUrl = (config.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  const cleanPath = resetUrl.startsWith('/') ? resetUrl : `/${resetUrl}`;
   const fullResetUrl = resetUrl.startsWith('http')
     ? resetUrl
-    : `${config.FRONTEND_URL}${resetUrl}`;
+    : `${baseUrl}${cleanPath}`;
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -155,7 +157,7 @@ async function sendPasswordResetEmail({ to, resetUrl, name = 'Participant' }) {
                     &#9201; Security Notice:
                   </p>
                   <p style="margin: 0; font-size: 12px; color: #64748b; line-height: 1.5;">
-                    This password reset link will expire in <strong>20 minutes</strong>. If you did not request a password reset, you can safely ignore this message; your password will remain secure.
+                    This password reset link will expire in <strong>60 minutes</strong>. If you did not request a password reset, you can safely ignore this message; your password will remain secure.
                   </p>
                 </div>
               </div>
@@ -181,7 +183,7 @@ async function sendPasswordResetEmail({ to, resetUrl, name = 'Participant' }) {
 </html>
   `;
 
-  const textContent = `Hello ${name},\n\nYou requested to reset your password for COLORIDO 2K26.\n\nPlease use the following link to reset your password:\n${fullResetUrl}\n\nThis link will expire in 20 minutes.\n\nIf you did not make this request, you can safely ignore this email.`;
+  const textContent = `Hello ${name},\n\nYou requested to reset your password for COLORIDO 2K26.\n\nPlease use the following link to reset your password:\n${fullResetUrl}\n\nThis link will expire in 60 minutes.\n\nIf you did not make this request, you can safely ignore this email.`;
 
   return await dispatchEmail({
     to,
@@ -199,9 +201,11 @@ async function sendPasswordResetEmail({ to, resetUrl, name = 'Participant' }) {
  * @param {string} [options.name] - Recipient name
  */
 async function sendVerificationEmail({ to, verificationUrl, name = 'Participant' }) {
+  const baseUrl = (config.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  const cleanPath = verificationUrl.startsWith('/') ? verificationUrl : `/${verificationUrl}`;
   const fullVerifyUrl = verificationUrl.startsWith('http')
     ? verificationUrl
-    : `${config.FRONTEND_URL}${verificationUrl}`;
+    : `${baseUrl}${cleanPath}`;
 
   const htmlContent = `
 <!DOCTYPE html>

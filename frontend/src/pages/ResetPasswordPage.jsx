@@ -10,7 +10,10 @@ export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const { resetPassword } = useAuth();
 
-  const token = searchParams.get('token');
+  const rawToken = searchParams.get('token') || '';
+  const cleanToken = rawToken.replace(/^["'<(\[]+|[>"')\]/\s]+$/g, '').trim();
+  const hexMatch = cleanToken.match(/[0-9a-fA-F]{64}/);
+  const token = hexMatch ? hexMatch[0] : cleanToken;
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,7 +30,7 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     async function verify() {
       if (!token) {
-        setErrorMsg('Password reset token is missing from the URL.');
+        setErrorMsg('Password reset token is missing from the URL. Please click the link sent to your email.');
         setVerifying(false);
         return;
       }
@@ -40,7 +43,11 @@ export default function ResetPasswordPage() {
           setErrorMsg(res.data?.message || 'Invalid or expired password reset token.');
         }
       } catch (err) {
-        setErrorMsg(err.response?.data?.message || 'Invalid or expired password reset token. Please request a new one.');
+        const serverMsg = err.response?.data?.message;
+        const fallbackMsg = err.message === 'Network Error'
+          ? 'Unable to connect to COLORIDO festival servers. Please check your internet connection.'
+          : 'Invalid or expired password reset token. Please request a new one.';
+        setErrorMsg(serverMsg || fallbackMsg);
       } finally {
         setVerifying(false);
       }
