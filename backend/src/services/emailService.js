@@ -6,77 +6,56 @@ if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
 
-let transporter465 = null;
-let transporter587 = null;
+const dnsPromises = require('dns').promises;
 
-const { Resend } = require('resend');
-let resendInstance = null;
-
-function getResend() {
-  if (!resendInstance && config.RESEND_API_KEY) {
-    resendInstance = new Resend(config.RESEND_API_KEY.trim());
-  }
-  return resendInstance;
-}
+let transporter = null;
+let lastResolvedIP = null;
 
 /**
- * Primary Nodemailer Transporter: Port 465 (SSL) forced to IPv4
+ * Nodemailer Transporter: Strictly Port 465 (SSL) connecting via resolved IPv4 address
  */
-function getTransporter465() {
-  if (!transporter465) {
-    transporter465 = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
+async function getTransporter() {
+  let targetHost = 'smtp.gmail.com';
+  try {
+    const addresses = await dnsPromises.resolve4('smtp.gmail.com');
+    if (addresses && addresses.length > 0) {
+      targetHost = addresses[0];
+    }
+  } catch (dnsErr) {
+    console.warn('[DNS RESOLVE4 NOTICE] Using hostname smtp.gmail.com:', dnsErr.message);
+  }
+
+  if (!transporter || lastResolvedIP !== targetHost) {
+    lastResolvedIP = targetHost;
+    transporter = nodemailer.createTransport({
+      host: targetHost,
       port: 465,
       secure: true,
-      family: 4, // Strictly force IPv4 to avoid ENETUNREACH on IPv6
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 8000,
+      tls: {
+        servername: 'smtp.gmail.com' // Guarantees valid SSL certificate matching
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
       auth: {
         user: config.SMTP.USER,
         pass: config.SMTP.PASS
       }
     });
   }
-  return transporter465;
+  return transporter;
 }
 
 /**
- * Alternate Nodemailer Transporter: Port 587 (STARTTLS) forced to IPv4
- */
-function getTransporter587() {
-  if (!transporter587) {
-    transporter587 = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // Port 587 uses STARTTLS
-      requireTLS: true,
-      family: 4, // Strictly force IPv4
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 8000,
-      auth: {
-        user: config.SMTP.USER,
-        pass: config.SMTP.PASS
-      }
-    });
-  }
-  return transporter587;
-}
-
-/**
- * Helper to dispatch email via Nodemailer (Port 465 -> Port 587 fallback)
+ * Dispatch email strictly via Nodemailer on Port 465
  */
 async function dispatchEmail({ to, subject, html, text }) {
   const recipientList = Array.isArray(to) ? to.join(', ') : to;
   const fromAddress = config.SMTP.FROM || config.EMAIL_FROM || 'COLORIDO 2K26 <hackerbot2005@gmail.com>';
 
-  let lastError = null;
-
-  // Attempt 1: Nodemailer via Port 465 (SSL, IPv4)
   try {
-    const transport = getTransporter465();
-    console.log(`[NODEMAILER] Sending email to ${recipientList} via smtp.gmail.com:465 (SSL, IPv4)...`);
+    const transport = await getTransporter();
+    console.log(`[NODEMAILER] Sending email to ${recipientList} via ${lastResolvedIP}:465 (SSL, IPv4)...`);
 
     const info = await transport.sendMail({
       from: fromAddress,
@@ -86,59 +65,15 @@ async function dispatchEmail({ to, subject, html, text }) {
       text
     });
 
-    console.log(`[NODEMAILER SUCCESS] Delivered to ${recipientList} via Port 465 (Message ID: ${info.messageId})`);
+    console.log(`[NODEMAILER SUCCESS] Delivered email to ${recipientList} via Port 465 (Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId, provider: 'nodemailer-465' };
-  } catch (err465) {
-    console.warn(`[NODEMAILER 465 FAILED] ${err465.message}. Retrying via Port 587 (STARTTLS, IPv4)...`);
-    lastError = err465;
+  } catch (err) {
+    console.error(`[NODEMAILER ERROR] Failed to send email to ${recipientList}:`, err.message);
+    return {
+      success: false,
+      error: `Nodemailer Port 465 failed: ${err.message}`
+    };
   }
-
-  // Attempt 2: Nodemailer via Port 587 (STARTTLS, IPv4)
-  try {
-    const transport = getTransporter587();
-    console.log(`[NODEMAILER] Retrying email to ${recipientList} via smtp.gmail.com:587 (STARTTLS, IPv4)...`);
-
-    const info = await transport.sendMail({
-      from: fromAddress,
-      to: recipientList,
-      subject,
-      html,
-      text
-    });
-
-    console.log(`[NODEMAILER SUCCESS] Delivered to ${recipientList} via Port 587 (Message ID: ${info.messageId})`);
-    return { success: true, messageId: info.messageId, provider: 'nodemailer-587' };
-  } catch (err587) {
-    console.warn(`[NODEMAILER 587 FAILED] ${err587.message}.`);
-    lastError = err587;
-  }
-
-  // Attempt 3: Resend HTTP REST API over Port 443 (if configured)
-  const resend = getResend();
-  if (resend) {
-    try {
-      console.log(`[BACKUP API] Attempting delivery via Resend API (Port 443) to ${recipientList}...`);
-      const { data, error } = await resend.emails.send({
-        from: 'COLORIDO 2K26 <onboarding@resend.dev>',
-        to: Array.isArray(to) ? to : [to],
-        subject,
-        html,
-        text
-      });
-
-      if (data && data.id) {
-        console.log(`[BACKUP API SUCCESS] Delivered via Resend to ${recipientList} (ID: ${data.id})`);
-        return { success: true, messageId: data.id, provider: 'resend' };
-      }
-    } catch (resendErr) {
-      console.error(`[BACKUP API EXCEPTION] ${resendErr.message}`);
-    }
-  }
-
-  return {
-    success: false,
-    error: `Nodemailer failed on both ports 465 and 587 (${lastError ? lastError.message : 'Connection refused'}).`
-  };
 }
 
 /**
@@ -439,8 +374,7 @@ module.exports = {
   sendPasswordResetEmail,
   sendVerificationEmail,
   sendContactReplyEmail,
-  getTransporter: getTransporter465,
-  getTransporter465,
-  getTransporter587,
-  getResendClient: getTransporter465
+  getTransporter,
+  getTransporter465: getTransporter,
+  getResendClient: getTransporter
 };
