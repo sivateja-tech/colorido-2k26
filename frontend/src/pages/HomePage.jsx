@@ -82,7 +82,7 @@ export default function HomePage() {
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-[#E67E22]" />
             <span className="text-[11px] font-mono font-bold text-[#95A5A6] uppercase tracking-wider">
-              [ NAAC A+ ]
+              NAAC A+
             </span>
           </div>
 
@@ -171,7 +171,7 @@ export default function HomePage() {
               >
                 {/* Index Numeral Treatment */}
                 <div className="flex items-center justify-between text-[11px] font-mono text-[#95A5A6]">
-                  <span>[ {item.num} ]</span>
+                  <span className="font-bold text-xs">{item.num}</span>
                   <div className={`p-1.5 rounded-lg bg-[#1a252f] ${item.color}`}>
                     <Icon className="w-3.5 h-3.5" />
                   </div>
@@ -201,7 +201,7 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center space-y-3 mb-12">
           <div className="inline-flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-[#2980B9] uppercase">
-            <span>// 02. FESTIVAL SPECTRUM</span>
+            <span>02. FESTIVAL SPECTRUM</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-black font-display text-[#ECF0F1] tracking-tight">
             Three Grand Categories
@@ -223,7 +223,7 @@ export default function HomePage() {
                 <DoodleSportsIcon color="#10B981" size={28} />
               </div>
               <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-md bg-[#1a252f] text-emerald-400 border border-emerald-500/30">
-                [ 01 // SPORTS ]
+                01 • SPORTS
               </span>
             </div>
 
@@ -265,7 +265,7 @@ export default function HomePage() {
                 <DoodleCulturalIcon color="#E67E22" size={28} />
               </div>
               <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-md bg-[#1a252f] text-[#E67E22] border border-[#E67E22]/30">
-                [ 02 // CULTURAL ]
+                02 • CULTURAL
               </span>
             </div>
 
@@ -307,7 +307,7 @@ export default function HomePage() {
                 <DoodleTechnicalIcon color="#3498DB" size={28} />
               </div>
               <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-md bg-[#1a252f] text-[#3498DB] border border-[#2980B9]/30">
-                [ 03 // TECHNICAL ]
+                03 • TECHNICAL
               </span>
             </div>
 
@@ -349,7 +349,7 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-[#2980B9] uppercase">
-              <span>// 03. SPOTLIGHT</span>
+              <span>03. SPOTLIGHT</span>
               <span className="w-1.5 h-1.5 rounded-full bg-[#E67E22]" />
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold font-display text-[#ECF0F1] mt-1.5">

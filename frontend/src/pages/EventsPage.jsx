@@ -82,7 +82,7 @@ export default function EventsPage() {
       {/* Editorial Header */}
       <div className="text-center space-y-3 max-w-3xl mx-auto">
         <div className="inline-flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-[#2980B9] uppercase">
-          <span>// OFFICIAL COMPETITION SCHEDULE</span>
+          <span>OFFICIAL COMPETITION SCHEDULE</span>
           <span className="w-1.5 h-1.5 rounded-full bg-[#E67E22]" />
         </div>
         
@@ -119,7 +119,7 @@ export default function EventsPage() {
                 : 'bg-dark-elevated dark:bg-dark-elevated light:bg-light-surface-secondary text-dark-text-secondary hover:text-dark-text'
             }`}
           >
-            <span>[ ALL EVENTS // {events.length} ]</span>
+            <span>All Events ({events.length})</span>
           </button>
           {CATEGORIES.map((cat) => (
             <button

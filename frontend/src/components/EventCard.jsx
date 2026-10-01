@@ -71,7 +71,7 @@ export default function EventCard({ event }) {
         {/* Editorial Top Badges: Category & Featured */}
         <div className="absolute top-3.5 left-3.5 flex items-center gap-2 z-20">
           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider backdrop-blur-md border shadow-md ${categoryBadge.bg}`}>
-            <span>[ {categoryBadge.label} ]</span>
+            <span>{categoryBadge.label}</span>
           </span>
           {event.featured && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider bg-[#E67E22]/20 text-[#E67E22] border border-[#E67E22]/40 backdrop-blur-md shadow-md">

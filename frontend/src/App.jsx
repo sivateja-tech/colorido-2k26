@@ -37,63 +37,69 @@ import AdminSchedulePage from './pages/AdminSchedulePage';
 import AdminResultsPage from './pages/AdminResultsPage';
 import AdminMessagesPage from './pages/AdminMessagesPage';
 
+// Components
+import SplashScreen from './components/SplashScreen';
+
 export default function App() {
   return (
-    <Routes>
-      {/* Public Festival Website Routes */}
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<HomePage />} />
-        <Route path="about" element={<AboutPage />} />
+    <>
+      <SplashScreen />
+      <Routes>
+        {/* Public Festival Website Routes */}
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="about" element={<AboutPage />} />
 
-        {/* Festival Events */}
-        <Route path="events" element={<EventsPage />} />
-        <Route path="events/sports" element={<SportsEventsPage />} />
-        <Route path="events/cultural" element={<CulturalEventsPage />} />
-        <Route path="events/technical" element={<TechnicalEventsPage />} />
-        <Route path="sports" element={<SportsEventsPage />} />
-        <Route path="cultural" element={<CulturalEventsPage />} />
-        <Route path="technical" element={<TechnicalEventsPage />} />
-        <Route path="events/:id" element={<EventDetailsPage />} />
+          {/* Festival Events */}
+          <Route path="events" element={<EventsPage />} />
+          <Route path="events/sports" element={<SportsEventsPage />} />
+          <Route path="events/cultural" element={<CulturalEventsPage />} />
+          <Route path="events/technical" element={<TechnicalEventsPage />} />
+          <Route path="sports" element={<SportsEventsPage />} />
+          <Route path="cultural" element={<CulturalEventsPage />} />
+          <Route path="technical" element={<TechnicalEventsPage />} />
+          <Route path="events/:id" element={<EventDetailsPage />} />
 
-        {/* Schedule & Results */}
-        <Route path="schedule" element={<SchedulePage />} />
-        <Route path="results" element={<ResultsPage />} />
-        <Route path="leaderboard" element={<LeaderboardPage />} />
+          {/* Schedule & Results */}
+          <Route path="schedule" element={<SchedulePage />} />
+          <Route path="results" element={<ResultsPage />} />
+          <Route path="leaderboard" element={<LeaderboardPage />} />
 
-        {/* Media & Campus */}
-        <Route path="gallery" element={<GalleryPage />} />
+          {/* Media & Campus */}
+          <Route path="gallery" element={<GalleryPage />} />
 
-        {/* Registration, Passes & User Roster */}
-        <Route path="register" element={<RegistrationPage />} />
-        <Route path="register/:id" element={<RegistrationPage />} />
-        <Route path="my-registrations" element={<MyRegistrationsPage />} />
-        <Route path="pass" element={<PassPage />} />
-        <Route path="pass/:id" element={<PassPage />} />
-        <Route path="verify/:id" element={<PassPage />} />
+          {/* Registration, Passes & User Roster */}
+          <Route path="register" element={<RegistrationPage />} />
+          <Route path="register/:id" element={<RegistrationPage />} />
+          <Route path="my-registrations" element={<MyRegistrationsPage />} />
+          <Route path="pass" element={<PassPage />} />
+          <Route path="pass/:id" element={<PassPage />} />
+          <Route path="verify/:id" element={<PassPage />} />
 
-        {/* Authentication Routes */}
-        <Route path="auth" element={<AuthPage />} />
-        <Route path="login" element={<AuthPage />} />
-        <Route path="forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="reset-password" element={<ResetPasswordPage />} />
-        <Route path="verify-email" element={<VerifyEmailPage />} />
+          {/* Authentication Routes */}
+          <Route path="auth" element={<AuthPage />} />
+          <Route path="login" element={<AuthPage />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
+          <Route path="verify-email" element={<VerifyEmailPage />} />
 
-        {/* Helpdesk & 404 */}
-        <Route path="contact" element={<ContactPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
+          {/* Helpdesk & 404 */}
+          <Route path="contact" element={<ContactPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
 
-      {/* Admin Portal Authentication & Routes */}
-      <Route path="/admin/login" element={<Navigate to="/auth" replace />} />
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminDashboardPage />} />
-        <Route path="dashboard" element={<AdminDashboardPage />} />
-        <Route path="events" element={<AdminEventsPage />} />
-        <Route path="registrations" element={<AdminRegistrationsPage />} />
-        <Route path="schedule" element={<AdminSchedulePage />} />
-        <Route path="results" element={<AdminResultsPage />} />
-        <Route path="messages" element={<AdminMessagesPage />} />
-      </Route>
-    </Routes>
+        {/* Admin Portal Authentication & Routes */}
+        <Route path="/admin/login" element={<Navigate to="/auth" replace />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="events" element={<AdminEventsPage />} />
+          <Route path="registrations" element={<AdminRegistrationsPage />} />
+          <Route path="schedule" element={<AdminSchedulePage />} />
+          <Route path="results" element={<AdminResultsPage />} />
+          <Route path="messages" element={<AdminMessagesPage />} />
+        </Route>
+      </Routes>
+    </>
   );
 }
