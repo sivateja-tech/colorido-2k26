@@ -59,13 +59,11 @@ async function requireAuth(req, res, next) {
     }
 
     if (!req.admin && account.isVerified === false) {
-      return res.status(403).json({
-        success: false,
-        unverified: true,
-        requiresVerification: true,
-        email: account.email,
-        message: 'Your email address is not verified. Please verify your email before accessing this feature.'
-      });
+      account.isVerified = true;
+      prisma.user.update({
+        where: { id: account.id },
+        data: { isVerified: true }
+      }).catch(() => {});
     }
 
     req.user = account;

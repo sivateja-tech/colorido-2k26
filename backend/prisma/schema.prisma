@@ -20,7 +20,7 @@ model User {
   year          String?
   phone         String?
   role          String         @default("USER")
-  isVerified    Boolean        @default(false)
+  isVerified    Boolean        @default(true)
   isTest        Boolean        @default(false)
   registrations Registration[]
   createdAt     DateTime       @default(now())

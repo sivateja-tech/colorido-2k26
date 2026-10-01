@@ -3,10 +3,9 @@ import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-do
 import {
   Lock, Mail, User, Phone, Building, BookOpen,
   Calendar, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle, Shield,
-  GraduationCap, MailCheck, RefreshCw, Check, X
+  GraduationCap, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { resendEmailVerification } from '../services/api';
 import BackButton from '../components/BackButton';
 
 export default function AuthPage() {
@@ -41,13 +40,6 @@ export default function AuthPage() {
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
 
-  // Verification state after account creation
-  const [verificationPending, setVerificationPending] = useState(null); // { email, verificationUrl }
-  const [resendingVerification, setResendingVerification] = useState(false);
-  const [resendStatusMsg, setResendStatusMsg] = useState('');
-  const [unverifiedEmail, setUnverifiedEmail] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
-
   // General feedback state
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(location.state?.error || '');
@@ -58,17 +50,6 @@ export default function AuthPage() {
     if (errorMsg) setErrorMsg('');
     if (successMsg) setSuccessMsg('');
   };
-
-  // Cooldown countdown timer
-  useEffect(() => {
-    let timer;
-    if (resendCooldown > 0) {
-      timer = setInterval(() => {
-        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [resendCooldown]);
 
   // Sync mode and prefill email whenever searchParams or location.state change
   useEffect(() => {
@@ -106,7 +87,6 @@ export default function AuthPage() {
     if (loading) return; // Prevent double-click
     setErrorMsg('');
     setSuccessMsg('');
-    setUnverifiedEmail('');
     setLoading(true);
 
     try {
@@ -118,12 +98,7 @@ export default function AuthPage() {
           navigate(redirectTarget || '/events', { replace: true });
         }
       } else {
-        if (res.requiresVerification) {
-          setUnverifiedEmail(res.email || signInEmail);
-          setErrorMsg(res.message || 'Your account is not verified. Please verify your email before logging in.');
-        } else {
-          setErrorMsg(res.message || 'Invalid email or password.');
-        }
+        setErrorMsg(res.message || 'Invalid email or password.');
       }
     } catch (err) {
       setErrorMsg('A connection error occurred. Please try again.');
@@ -132,13 +107,12 @@ export default function AuthPage() {
     }
   };
 
-  // Handle Create Account submission
+  // Handle Create Account submission (Immediate activation)
   const handleSignUp = async (e) => {
     e.preventDefault();
     if (loading) return; // Prevent double-click
     setErrorMsg('');
     setSuccessMsg('');
-    setVerificationPending(null);
 
     if (signUpForm.password !== signUpForm.confirmPassword) {
       setErrorMsg('Passwords do not match. Please verify your passwords.');
@@ -155,16 +129,16 @@ export default function AuthPage() {
     try {
       const res = await register(signUpForm);
       if (res.success) {
-        setVerificationPending({ email: res.email || signUpForm.email });
-        setSuccessMsg(res.message || 'Account created! Please check your email to activate your account.');
+        setSuccessMsg(res.message || 'Account created successfully! Welcome to COLORIDO 2K26.');
+        // User is immediately active and authenticated
+        setTimeout(() => {
+          navigate(redirectTarget || res.redirectTo || '/events', { replace: true });
+        }, 700);
       } else {
-        if (res.alreadyExists && res.isVerified) {
-          setErrorMsg('An account with this email is already registered and verified. Please sign in instead.');
-        } else if (res.requiresVerification || (res.alreadyExists && !res.isVerified)) {
-          setVerificationPending({ email: res.email || signUpForm.email });
-          setSuccessMsg(res.message || 'An unverified account with this email exists. A verification email has been sent.');
+        if (res.alreadyExists) {
+          setErrorMsg('An account with this email is already registered. Please sign in instead.');
         } else {
-          setErrorMsg(res.message || 'Registration failed.');
+          setErrorMsg(res.message || 'Registration failed. Please check your details and try again.');
         }
       }
     } catch (err) {
@@ -174,35 +148,9 @@ export default function AuthPage() {
     }
   };
 
-  // Resend email verification handler
-  const handleResendVerification = async (targetEmail) => {
-    if (resendingVerification || resendCooldown > 0) return;
-    const emailToUse = targetEmail || verificationPending?.email || unverifiedEmail || signInEmail;
-    if (!emailToUse) return;
-
-    setResendingVerification(true);
-    setResendStatusMsg('');
-    try {
-      const res = await resendEmailVerification(emailToUse);
-      setResendStatusMsg(res.data?.message || 'A fresh activation link has been sent to your email.');
-      setResendCooldown(60);
-    } catch (err) {
-      if (err.response?.status === 429) {
-        const retry = err.response?.data?.retryAfter || 60;
-        setResendCooldown(retry);
-        setResendStatusMsg(err.response?.data?.message || `Please wait ${retry} seconds before requesting another email.`);
-      } else {
-        setResendStatusMsg(err.response?.data?.message || 'Failed to resend activation link. Please try again shortly.');
-      }
-    } finally {
-      setResendingVerification(false);
-    }
-  };
-
   // Evaluator Autofill Helpers
   const fillAdminCredentials = () => {
     setMode('signin');
-    setVerificationPending(null);
     setSignInEmail('admin@colorido2k26.com');
     setSignInPassword('Admin@Colorido2026!');
     setErrorMsg('');
@@ -210,7 +158,6 @@ export default function AuthPage() {
 
   const fillParticipantCredentials = () => {
     setMode('signup');
-    setVerificationPending(null);
     setSignUpForm({
       fullName: 'Venkata Sivateja Kodavatiganti',
       email: 'sivatejakodavatiganti@gmail.com',
@@ -241,16 +188,10 @@ export default function AuthPage() {
             </span>
           </Link>
           <h1 className="text-2xl sm:text-3xl font-black font-display text-[#ECF0F1]">
-            {verificationPending
-              ? 'Verify Your Email'
-              : mode === 'signin'
-              ? 'Sign In to Your Account'
-              : 'Create Festival Account'}
+            {mode === 'signin' ? 'Sign In to Your Account' : 'Create Festival Account'}
           </h1>
           <p className="text-xs sm:text-sm text-[#95A5A6] max-w-sm mx-auto">
-            {verificationPending
-              ? 'Complete the activation step to begin registering for tournaments and passes.'
-              : mode === 'signin'
+            {mode === 'signin'
               ? 'Access your registrations, festival entry passes, schedules, or admin portal.'
               : 'Register for championships across Sports, Cultural, and Technical pillars.'}
           </p>
@@ -259,468 +200,358 @@ export default function AuthPage() {
         {/* Auth Card */}
         <div className="p-6 sm:p-8 rounded-3xl bg-[#2C3E50]/80 backdrop-blur-xl border border-[#95A5A6]/20 shadow-2xl space-y-6">
 
-          {/* Conditional View: When Verification is Pending after signup */}
-          {verificationPending ? (
-            <div className="py-4 space-y-6 animate-in fade-in">
-              <div className="text-center space-y-3">
-                <div className="w-16 h-16 mx-auto rounded-2xl bg-[#2980B9]/20 border border-[#2980B9]/40 flex items-center justify-center text-[#2980B9]">
-                  <MailCheck className="w-8 h-8" />
-                </div>
-                <div className="space-y-1">
-                  <h2 className="text-xl font-black text-[#ECF0F1]">Check Your Email</h2>
-                  <p className="text-xs text-[#95A5A6]">
-                    We have dispatched a verification link to:
-                  </p>
-                  <p className="text-sm font-mono font-bold text-[#E67E22] bg-[#1a252f] py-1.5 px-3 rounded-xl border border-[#95A5A6]/20 inline-block">
-                    {verificationPending.email}
-                  </p>
-                </div>
-              </div>
+          {/* Mode Switcher Tabs */}
+          <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signin');
+                setErrorMsg('');
+              }}
+              className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
+                mode === 'signin'
+                  ? 'bg-[#2980B9] text-white shadow-md'
+                  : 'text-[#95A5A6] hover:text-[#ECF0F1]'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signup');
+                setErrorMsg('');
+              }}
+              className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
+                mode === 'signup'
+                  ? 'bg-[#2980B9] text-white shadow-md'
+                  : 'text-[#95A5A6] hover:text-[#ECF0F1]'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
 
-              {/* Step by step info */}
-              <div className="p-4 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 space-y-2 text-xs text-[#95A5A6]">
-                <div className="font-bold text-[#ECF0F1] flex items-center gap-1.5">
-                  <Check className="w-4 h-4 text-[#2980B9]" />
-                  <span>Activation Instructions:</span>
-                </div>
-                <ol className="list-decimal list-inside space-y-1.5 pl-1 leading-relaxed">
-                  <li>Open the email from <strong className="text-[#ECF0F1]">Colorido 2K26</strong>.</li>
-                  <li>Click on the <strong className="text-[#E67E22]">"Activate Festival Account"</strong> button.</li>
-                  <li>Once activated, return here and sign in with your password.</li>
-                </ol>
-                <p className="text-[11px] text-[#95A5A6]/80 pt-1 border-t border-[#95A5A6]/10">
-                  Tip: Check your spam or promotions folder if you don't see it within a minute.
-                </p>
-              </div>
-
-              {/* Feedback Alert for Resending */}
-              {resendStatusMsg && (
-                <div className="p-3 rounded-xl bg-[#2980B9]/20 border border-[#2980B9]/40 text-xs font-semibold text-[#ECF0F1]">
-                  {resendStatusMsg}
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  disabled={resendingVerification || resendCooldown > 0}
-                  onClick={() => handleResendVerification(verificationPending.email)}
-                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-xs font-bold text-[#ECF0F1] bg-[#1a252f] hover:bg-[#243342] border border-[#95A5A6]/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${resendingVerification ? 'animate-spin' : ''}`} />
-                  <span>
-                    {resendingVerification
-                      ? 'Resending Link...'
-                      : resendCooldown > 0
-                      ? `Resend in ${resendCooldown}s`
-                      : 'Resend Verification Email'}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVerificationPending(null);
-                    setMode('signin');
-                    setSignInEmail(verificationPending.email);
-                    setSuccessMsg('Email activation link sent! Once clicked, enter your password to sign in.');
-                  }}
-                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-xs font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] transition-all flex items-center justify-center gap-2"
-                >
-                  <span>Go to Sign In</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
+          {/* Feedback Alerts */}
+          {errorMsg && (
+            <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span className="flex-1 leading-relaxed">{errorMsg}</span>
+              <button
+                type="button"
+                onClick={() => setErrorMsg('')}
+                className="text-red-400 hover:text-red-200 transition-colors shrink-0 p-0.5 ml-1"
+                title="Dismiss alert"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          ) : (
-            <>
-              {/* Mode Switcher Tabs */}
-              <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('signin');
-                    setErrorMsg('');
-                    setUnverifiedEmail('');
+          )}
+
+          {successMsg && (
+            <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {/* SIGN IN FORM */}
+          {mode === 'signin' && (
+            <form onSubmit={handleSignIn} className="space-y-4">
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-[#2980B9]" />
+                  <span>Email Address *</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={signInEmail}
+                  onChange={(e) => {
+                    setSignInEmail(e.target.value);
+                    if (errorMsg) setErrorMsg('');
                   }}
-                  className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    mode === 'signin'
-                      ? 'bg-[#2980B9] text-white shadow-md'
-                      : 'text-[#95A5A6] hover:text-[#ECF0F1]'
-                  }`}
-                >
-                  Sign In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('signup');
-                    setErrorMsg('');
-                    setUnverifiedEmail('');
-                  }}
-                  className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    mode === 'signup'
-                      ? 'bg-[#2980B9] text-white shadow-md'
-                      : 'text-[#95A5A6] hover:text-[#ECF0F1]'
-                  }`}
-                >
-                  Create Account
-                </button>
+                  placeholder="name@example.com or admin@colorido2k26.com"
+                  className="w-full px-4 py-3 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs sm:text-sm text-[#ECF0F1] placeholder:text-[#95A5A6]/50 focus:outline-none focus:border-[#2980B9]"
+                />
               </div>
 
-              {/* Feedback Alerts */}
-              {errorMsg && (
-                <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold animate-in fade-in">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span className="flex-1 leading-relaxed">{errorMsg}</span>
+              {/* Password */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-[#2980B9]" />
+                    <span>Password *</span>
+                  </label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs font-semibold text-[#2980B9] hover:underline"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showSignInPassword ? 'text' : 'password'}
+                    required
+                    value={signInPassword}
+                    onChange={(e) => {
+                      setSignInPassword(e.target.value);
+                      if (errorMsg) setErrorMsg('');
+                    }}
+                    placeholder="Enter your password"
+                    className="w-full pl-4 pr-11 py-3 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs sm:text-sm text-[#ECF0F1] placeholder:text-[#95A5A6]/50 focus:outline-none focus:border-[#2980B9]"
+                  />
                   <button
                     type="button"
-                    onClick={() => setErrorMsg('')}
-                    className="text-red-400 hover:text-red-200 transition-colors shrink-0 p-0.5 ml-1"
-                    title="Dismiss alert"
+                    onClick={() => setShowSignInPassword(!showSignInPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#95A5A6] hover:text-[#ECF0F1]"
                   >
-                    <X className="w-4 h-4" />
+                    {showSignInPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-              )}
+              </div>
 
-              {successMsg && (
-                <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>{successMsg}</span>
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-lg shadow-[#2980B9]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Sign In</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* CREATE ACCOUNT FORM */}
+          {mode === 'signup' && (
+            <form onSubmit={handleSignUp} className="space-y-3.5">
+              {/* Full Name */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-[#2980B9]" />
+                  <span>Full Name *</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={signUpForm.fullName}
+                  onChange={(e) => handleSignUpFieldChange('fullName', e.target.value)}
+                  placeholder="e.g. Venkata Sivateja Kodavatiganti"
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
+                />
+              </div>
+
+              {/* Email & Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-[#2980B9]" />
+                    <span>Email Address *</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={signUpForm.email}
+                    onChange={(e) => handleSignUpFieldChange('email', e.target.value)}
+                    placeholder="name@gmail.com"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
+                  />
                 </div>
-              )}
 
-              {/* Unverified Account Warning Alert in Sign In */}
-              {unverifiedEmail && (
-                <div className="p-3.5 rounded-2xl bg-[#E67E22]/20 border border-[#E67E22]/40 text-[#ECF0F1] text-xs space-y-2 animate-in fade-in">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span className="font-semibold text-[#E67E22]">Account Pending Email Verification</span>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-[#2980B9]" />
+                    <span>Phone Number *</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={signUpForm.phone}
+                    onChange={(e) => handleSignUpFieldChange('phone', e.target.value)}
+                    placeholder="+91 9876543210"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
+                  />
+                </div>
+              </div>
+
+              {/* College */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
+                  <Building className="w-3.5 h-3.5 text-[#2980B9]" />
+                  <span>College / Institution *</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={signUpForm.college}
+                  onChange={(e) => handleSignUpFieldChange('college', e.target.value)}
+                  placeholder="R V R & J C College of Engineering"
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
+                />
+              </div>
+
+              {/* Course & Academic Year */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5 text-[#2980B9]" />
+                    <span>Course *</span>
+                  </label>
+                  <select
+                    value={signUpForm.course}
+                    onChange={(e) => handleSignUpFieldChange('course', e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
+                  >
+                    <option value="B.Tech">B.Tech</option>
+                    <option value="M.Tech">M.Tech</option>
+                    <option value="MCA">MCA</option>
+                    <option value="MBA">MBA</option>
+                    <option value="B.Pharmacy">B.Pharmacy</option>
+                    <option value="M.Pharmacy">M.Pharmacy</option>
+                    <option value="B.Sc">B.Sc</option>
+                    <option value="M.Sc">M.Sc</option>
+                    <option value="Diploma">Diploma</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-[#2980B9]" />
+                    <span>Academic Year *</span>
+                  </label>
+                  <select
+                    value={signUpForm.year}
+                    onChange={(e) => handleSignUpFieldChange('year', e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
+                  >
+                    <option value="1st Year">1st Year</option>
+                    <option value="2nd Year">2nd Year</option>
+                    <option value="3rd Year">3rd Year</option>
+                    <option value="4th Year">4th Year</option>
+                    <option value="Postgraduate">Postgraduate</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Department */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-[#2980B9]" />
+                  <span>Department / Branch *</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={signUpForm.department}
+                  onChange={(e) => handleSignUpFieldChange('department', e.target.value)}
+                  placeholder="e.g. Computer Science & Engineering"
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
+                />
+              </div>
+
+              {/* Password & Confirm Password */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-[#2980B9]" />
+                    <span>Password *</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showSignUpPassword ? 'text' : 'password'}
+                      required
+                      value={signUpForm.password}
+                      onChange={(e) => handleSignUpFieldChange('password', e.target.value)}
+                      placeholder="Min 6 characters"
+                      className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
+                    />
                     <button
                       type="button"
-                      disabled={resendingVerification || resendCooldown > 0}
-                      onClick={() => handleResendVerification(unverifiedEmail)}
-                      className="px-3 py-1.5 rounded-xl bg-[#E67E22] hover:bg-[#d35400] text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors self-start sm:self-auto disabled:opacity-50"
+                      onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#95A5A6] hover:text-[#ECF0F1]"
                     >
-                      <RefreshCw className={`w-3 h-3 ${resendingVerification ? 'animate-spin' : ''}`} />
-                      <span>
-                        {resendingVerification
-                          ? 'Resending...'
-                          : resendCooldown > 0
-                          ? `Resend in ${resendCooldown}s`
-                          : 'Resend Verification Email'}
-                      </span>
+                      {showSignUpPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
                   </div>
-                  {resendStatusMsg && (
-                    <div className="text-[11px] text-emerald-400 font-semibold pt-1 border-t border-[#95A5A6]/20">
-                      {resendStatusMsg}
-                    </div>
-                  )}
                 </div>
-              )}
 
-              {/* SIGN IN FORM */}
-              {mode === 'signin' && (
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  {/* Email */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5 text-[#2980B9]" />
-                      <span>Email Address *</span>
-                    </label>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-[#2980B9]" />
+                    <span>Confirm Password *</span>
+                  </label>
+                  <div className="relative">
                     <input
-                      type="email"
+                      type={showSignUpConfirmPassword ? 'text' : 'password'}
                       required
-                      value={signInEmail}
-                      onChange={(e) => {
-                        setSignInEmail(e.target.value);
-                        if (errorMsg) setErrorMsg('');
-                        if (unverifiedEmail) setUnverifiedEmail('');
-                      }}
-                      placeholder="name@example.com or admin@colorido2k26.com"
-                      className="w-full px-4 py-3 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs sm:text-sm text-[#ECF0F1] placeholder:text-[#95A5A6]/50 focus:outline-none focus:border-[#2980B9]"
+                      value={signUpForm.confirmPassword}
+                      onChange={(e) => handleSignUpFieldChange('confirmPassword', e.target.value)}
+                      placeholder="Repeat password"
+                      className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignUpConfirmPassword(!showSignUpConfirmPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#95A5A6] hover:text-[#ECF0F1]"
+                    >
+                      {showSignUpConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
                   </div>
-
-                  {/* Password */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
-                        <Lock className="w-3.5 h-3.5 text-[#2980B9]" />
-                        <span>Password *</span>
-                      </label>
-                      <Link
-                        to="/forgot-password"
-                        className="text-xs font-semibold text-[#2980B9] hover:underline"
-                      >
-                        Forgot Password?
-                      </Link>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type={showSignInPassword ? 'text' : 'password'}
-                        required
-                        value={signInPassword}
-                        onChange={(e) => {
-                          setSignInPassword(e.target.value);
-                          if (errorMsg) setErrorMsg('');
-                        }}
-                        placeholder="Enter your password"
-                        className="w-full pl-4 pr-11 py-3 rounded-2xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs sm:text-sm text-[#ECF0F1] placeholder:text-[#95A5A6]/50 focus:outline-none focus:border-[#2980B9]"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSignInPassword(!showSignInPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#95A5A6] hover:text-[#ECF0F1]"
-                      >
-                        {showSignInPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Submit */}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-lg shadow-[#2980B9]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
-                  >
-                    {loading ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <span>Sign In</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
-
-              {/* CREATE ACCOUNT FORM */}
-              {mode === 'signup' && (
-                <form onSubmit={handleSignUp} className="space-y-3.5">
-                  {/* Full Name */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-[#2980B9]" />
-                      <span>Full Name *</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={signUpForm.fullName}
-                      onChange={(e) => handleSignUpFieldChange('fullName', e.target.value)}
-                      placeholder="e.g. Venkata Sivateja Kodavatiganti"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
-                    />
-                  </div>
-
-                  {/* Email & Phone */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-[#2980B9]" />
-                        <span>Email Address *</span>
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={signUpForm.email}
-                        onChange={(e) => handleSignUpFieldChange('email', e.target.value)}
-                        placeholder="name@gmail.com"
-                        className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-[#2980B9]" />
-                        <span>Phone Number *</span>
-                      </label>
-                      <input
-                        type="tel"
-                        required
-                        value={signUpForm.phone}
-                        onChange={(e) => handleSignUpFieldChange('phone', e.target.value)}
-                        placeholder="+91 9876543210"
-                        className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* College */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
-                      <Building className="w-3.5 h-3.5 text-[#2980B9]" />
-                      <span>College / Institution *</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={signUpForm.college}
-                      onChange={(e) => handleSignUpFieldChange('college', e.target.value)}
-                      placeholder="R V R & J C College of Engineering"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
-                    />
-                  </div>
-
-                  {/* Course Dropdown (B.Tech, M.Tech, MCA, MBA, etc.) & Academic Year */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
-                        <GraduationCap className="w-3.5 h-3.5 text-[#2980B9]" />
-                        <span>Course *</span>
-                      </label>
-                      <select
-                        value={signUpForm.course}
-                        onChange={(e) => handleSignUpFieldChange('course', e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
-                      >
-                        <option value="B.Tech">B.Tech</option>
-                        <option value="M.Tech">M.Tech</option>
-                        <option value="MCA">MCA</option>
-                        <option value="MBA">MBA</option>
-                        <option value="B.Pharmacy">B.Pharmacy</option>
-                        <option value="M.Pharmacy">M.Pharmacy</option>
-                        <option value="B.Sc">B.Sc</option>
-                        <option value="M.Sc">M.Sc</option>
-                        <option value="Diploma">Diploma</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-[#2980B9]" />
-                        <span>Academic Year *</span>
-                      </label>
-                      <select
-                        value={signUpForm.year}
-                        onChange={(e) => handleSignUpFieldChange('year', e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
-                      >
-                        <option value="1st Year">1st Year</option>
-                        <option value="2nd Year">2nd Year</option>
-                        <option value="3rd Year">3rd Year</option>
-                        <option value="4th Year">4th Year</option>
-                        <option value="Postgraduate">Postgraduate</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Department */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
-                      <BookOpen className="w-3.5 h-3.5 text-[#2980B9]" />
-                      <span>Department / Branch *</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={signUpForm.department}
-                      onChange={(e) => handleSignUpFieldChange('department', e.target.value)}
-                      placeholder="e.g. Computer Science & Engineering"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
-                    />
-                  </div>
-
-                  {/* Password & Confirm Password */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
-                        <Lock className="w-3.5 h-3.5 text-[#2980B9]" />
-                        <span>Password *</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showSignUpPassword ? 'text' : 'password'}
-                          required
-                          value={signUpForm.password}
-                          onChange={(e) => handleSignUpFieldChange('password', e.target.value)}
-                          placeholder="Min 6 characters"
-                          className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowSignUpPassword(!showSignUpPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#95A5A6] hover:text-[#ECF0F1]"
-                        >
-                          {showSignUpPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-[#95A5A6] flex items-center gap-1.5">
-                        <Lock className="w-3.5 h-3.5 text-[#2980B9]" />
-                        <span>Confirm Password *</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showSignUpConfirmPassword ? 'text' : 'password'}
-                          required
-                          value={signUpForm.confirmPassword}
-                          onChange={(e) => handleSignUpFieldChange('confirmPassword', e.target.value)}
-                          placeholder="Repeat password"
-                          className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-[#1a252f] border border-[#95A5A6]/20 text-xs text-[#ECF0F1] focus:outline-none focus:border-[#2980B9]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowSignUpConfirmPassword(!showSignUpConfirmPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#95A5A6] hover:text-[#ECF0F1]"
-                        >
-                          {showSignUpConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Submit */}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-lg shadow-[#2980B9]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
-                  >
-                    {loading ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <span>Create Account</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
-
-              {/* Quick Evaluator Autofill Toolbar */}
-              <div className="pt-4 border-t border-[#95A5A6]/20 space-y-2">
-                <div className="text-[11px] font-bold text-[#95A5A6] uppercase tracking-wider text-center">
-                  Competition Evaluator Quick Fill
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={fillAdminCredentials}
-                    className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#E67E22]/15 hover:bg-[#E67E22]/25 text-[#E67E22] border border-[#E67E22]/30 transition-colors flex items-center gap-1.5"
-                  >
-                    <Shield className="w-3 h-3" />
-                    <span>Autofill Admin</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={fillParticipantCredentials}
-                    className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#2980B9]/15 hover:bg-[#2980B9]/25 text-[#2980B9] border border-[#2980B9]/30 transition-colors flex items-center gap-1.5"
-                  >
-                    <User className="w-3 h-3" />
-                    <span>Autofill Participant</span>
-                  </button>
                 </div>
               </div>
-            </>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 px-4 rounded-2xl text-xs sm:text-sm font-bold text-white bg-[#2980B9] hover:bg-[#2471A3] shadow-lg shadow-[#2980B9]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Create Account</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
           )}
+
+          {/* Quick Evaluator Autofill Toolbar */}
+          <div className="pt-4 border-t border-[#95A5A6]/20 space-y-2">
+            <div className="text-[11px] font-bold text-[#95A5A6] uppercase tracking-wider text-center">
+              Competition Evaluator Quick Fill
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={fillAdminCredentials}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#E67E22]/15 hover:bg-[#E67E22]/25 text-[#E67E22] border border-[#E67E22]/30 transition-colors flex items-center gap-1.5"
+              >
+                <Shield className="w-3 h-3" />
+                <span>Autofill Admin</span>
+              </button>
+              <button
+                type="button"
+                onClick={fillParticipantCredentials}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#2980B9]/15 hover:bg-[#2980B9]/25 text-[#2980B9] border border-[#2980B9]/30 transition-colors flex items-center gap-1.5"
+              >
+                <User className="w-3 h-3" />
+                <span>Autofill Participant</span>
+              </button>
+            </div>
+          </div>
 
         </div>
       </div>

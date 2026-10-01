@@ -48,13 +48,17 @@ export const submitContactMessage = (data) => api.post('/contact', data);
 // -------------------------------------------------------------
 export const login = (email, password) => api.post('/auth/login', { email, password });
 export const register = (data) => api.post('/auth/register', data);
-export const verifyEmail = (token) => api.get('/auth/verify-email', { params: { token } });
-export const resendEmailVerification = (email) => api.post('/auth/resend-verification', { email });
 export const forgotPassword = (email) => api.post('/auth/forgot-password', { email });
-export const verifyResetToken = (token) => api.get('/auth/verify-reset-token', { params: { token } });
+export const resendResetCode = (email) => api.post('/auth/resend-reset-code', { email });
+export const verifyResetCode = (email, code) => api.post('/auth/verify-reset-code', { email, code });
 export const resetPassword = (data) => api.post('/auth/reset-password', data);
 export const changePassword = (data) => api.post('/auth/change-password', data);
 export const logoutUserApi = () => api.post('/auth/logout');
+
+// Backward compatibility aliases
+export const verifyEmail = () => Promise.resolve({ data: { success: true, message: 'Email verification is no longer required.' } });
+export const resendEmailVerification = () => Promise.resolve({ data: { success: true, message: 'Email verification is no longer required.' } });
+export const verifyResetToken = (token) => api.get('/auth/verify-reset-code', { params: { token } });
 
 export const fetchCurrentUser = () => api.get('/auth/me');
 export const fetchAdminMe = () => api.get('/auth/admin/me');

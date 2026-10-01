@@ -374,7 +374,99 @@ ${replyText}
   });
 }
 
+/**
+ * Send 6-digit password reset code email
+ * @param {Object} options
+ * @param {string} options.to - Recipient email address
+ * @param {string} options.code - 6-digit verification code
+ * @param {string} [options.name] - Recipient name
+ */
+async function sendPasswordResetCodeEmail({ to, code, name = 'Participant' }) {
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your COLORIDO 2K26 Password Reset Code</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #1A252F; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #ECF0F1;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #1A252F; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 580px; background: #2C3E50; border-radius: 24px; border: 1px solid rgba(149, 165, 166, 0.25); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow: hidden;">
+          <tr>
+            <td style="height: 6px; background: linear-gradient(90deg, #2980B9, #3498DB, #E67E22);"></td>
+          </tr>
+          <tr>
+            <td style="padding: 36px 36px 20px 36px; text-align: center;">
+              <h1 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.5px; color: #ECF0F1;">
+                COLORIDO <span style="color: #E67E22;">2K26</span>
+              </h1>
+              <p style="margin: 6px 0 0 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: #95A5A6;">
+                R V R &amp; J C College of Engineering
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 36px 30px 36px;">
+              <div style="background-color: rgba(26, 37, 47, 0.7); border: 1px solid rgba(149, 165, 166, 0.2); border-radius: 16px; padding: 28px; text-align: center;">
+                <h2 style="margin: 0 0 14px 0; font-size: 20px; font-weight: 700; color: #ECF0F1;">
+                  Password Reset Code
+                </h2>
+                <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #BDC3C7; text-align: left;">
+                  Hello <strong style="color: #ECF0F1;">${name}</strong>,
+                </p>
+                <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #95A5A6; text-align: left;">
+                  We received a request to reset your COLORIDO 2K26 account password. Use the 6-digit verification code below to complete the reset:
+                </p>
+                
+                <!-- 6-digit Code Badge -->
+                <div style="margin: 28px 0; padding: 20px; background-color: #1A252F; border: 2px dashed #E67E22; border-radius: 16px; display: inline-block;">
+                  <span style="font-family: 'Courier New', monospace; font-size: 38px; font-weight: 900; letter-spacing: 10px; color: #E67E22; text-shadow: 0 0 12px rgba(230, 126, 34, 0.3);">
+                    ${code}
+                  </span>
+                </div>
+
+                <p style="margin: 20px 0 6px 0; font-size: 13px; color: #E67E22; font-weight: 700;">
+                  &#9201; This code expires in 10 minutes.
+                </p>
+                <p style="margin: 0; font-size: 12px; color: #95A5A6; line-height: 1.5;">
+                  If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.
+                </p>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 36px 28px 36px; text-align: center; border-top: 1px solid rgba(149, 165, 166, 0.15);">
+              <p style="margin: 0 0 4px 0; font-size: 11px; color: #95A5A6;">
+                COLORIDO 2K26 &bull; National Cultural, Sports &amp; Technical Festival
+              </p>
+              <p style="margin: 0; font-size: 10px; color: #7F8C8D;">
+                R V R &amp; J C College of Engineering &bull; Chandramoulipuram, Chowdavaram, Guntur, AP
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const textContent = `Hello ${name},\n\nYour COLORIDO 2K26 password reset code is: ${code}\n\nThis 6-digit code will expire in 10 minutes.\n\nIf you did not request a password reset, please ignore this email.`;
+
+  return await dispatchEmail({
+    to,
+    subject: `Your Password Reset Code: ${code} — COLORIDO 2K26`,
+    html: htmlContent,
+    text: textContent
+  });
+}
+
 module.exports = {
+  sendPasswordResetCodeEmail,
   sendPasswordResetEmail,
   sendVerificationEmail,
   sendContactReplyEmail,

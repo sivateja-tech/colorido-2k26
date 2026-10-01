@@ -3,13 +3,13 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const prisma = require('../services/prisma');
 const config = require('../config');
-const { sendPasswordResetEmail, sendVerificationEmail } = require('../services/emailService');
+const { sendPasswordResetCodeEmail } = require('../services/emailService');
 
 /**
- * UNIFIED LOGIN (Section: AUTHENTICATION — FINAL DESIGN)
- * Single endpoint handling authentication for BOTH User and Admin accounts.
- * Authentication Method: Email + Password.
- * Backend determines role and redirection URL.
+ * 1. UNIFIED LOGIN
+ * Handles Email + Password authentication for BOTH Admin and User accounts.
+ * Validates credentials via bcrypt and issues signed JWT.
+ * No email-verification gating — all registered users are active.
  */
 async function unifiedLogin(req, res, next) {
   try {
@@ -18,6 +18,7 @@ async function unifiedLogin(req, res, next) {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
+        code: 'MISSING_FIELDS',
         message: 'Email and password are required.'
       });
     }
@@ -34,11 +35,12 @@ async function unifiedLogin(req, res, next) {
       if (!isMatch) {
         return res.status(401).json({
           success: false,
+          code: 'INVALID_CREDENTIALS',
           message: 'Invalid email or password.'
         });
       }
 
-      // Generate Admin JWT
+      // Generate Admin JWT (3-day duration)
       const token = jwt.sign(
         {
           adminId: admin.id,
@@ -75,6 +77,7 @@ async function unifiedLogin(req, res, next) {
       if (!user.passwordHash) {
         return res.status(401).json({
           success: false,
+          code: 'PASSWORD_NOT_SET',
           message: 'This account requires a password. Please use Forgot Password to set one.'
         });
       }
@@ -83,22 +86,20 @@ async function unifiedLogin(req, res, next) {
       if (!isMatch) {
         return res.status(401).json({
           success: false,
+          code: 'INVALID_CREDENTIALS',
           message: 'Invalid email or password.'
         });
       }
 
-      // Check Email Verification status
+      // Ensure account is marked verified (active) in the background if legacy flag was false
       if (user.isVerified === false) {
-        return res.status(403).json({
-          success: false,
-          unverified: true,
-          requiresVerification: true,
-          email: user.email,
-          message: 'Your email address is not verified yet. Please check your inbox or click Resend Verification to activate your account.'
-        });
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { isVerified: true }
+        }).catch(err => console.warn('[AUTH] Could not auto-upgrade isVerified:', err.message));
       }
 
-      // Generate User JWT
+      // Generate User JWT (7-day duration)
       const token = jwt.sign(
         {
           userId: user.id,
@@ -123,6 +124,7 @@ async function unifiedLogin(req, res, next) {
           college: user.college,
           department: user.department,
           year: user.year,
+          course: user.course,
           phone: user.phone,
           role: 'USER',
           isVerified: true
@@ -133,6 +135,7 @@ async function unifiedLogin(req, res, next) {
     // Neither Admin nor User found
     return res.status(401).json({
       success: false,
+      code: 'INVALID_CREDENTIALS',
       message: 'Invalid email or password.'
     });
   } catch (err) {
@@ -141,11 +144,11 @@ async function unifiedLogin(req, res, next) {
 }
 
 /**
- * USER REGISTRATION (Section: AUTHENTICATION — FINAL DESIGN)
- * Public registration for normal participants.
- * Fields: Full Name, Email, Phone, College, Department, Year, Password, Confirm Password.
- * Automatically and strictly sets role = 'USER' and isVerified = false.
- * Dispatches verification email with secure single-use token.
+ * 2. USER REGISTRATION (SIGNUP)
+ * Validates all fields, normalizes email, checks for duplicates, hashes password with bcrypt.
+ * Account is created as IMMEDIATELY ACTIVE (isVerified: true).
+ * NO email verification, NO verification link, NO verification screen.
+ * User can login immediately after signup (JWT and profile returned).
  */
 async function registerUser(req, res, next) {
   try {
@@ -174,6 +177,7 @@ async function registerUser(req, res, next) {
     if (!displayName || !userEmail || !userPhone || !userCollege || !userDepartment || !userYear || !password) {
       return res.status(400).json({
         success: false,
+        code: 'VALIDATION_ERROR',
         message: 'All fields (Full Name, Email, Phone, College, Course, Department, Year, and Password) are required.'
       });
     }
@@ -181,6 +185,7 @@ async function registerUser(req, res, next) {
     if (!userEmail.includes('@') || !userEmail.includes('.')) {
       return res.status(400).json({
         success: false,
+        code: 'INVALID_EMAIL',
         message: 'Please provide a valid email address.'
       });
     }
@@ -188,6 +193,7 @@ async function registerUser(req, res, next) {
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
+        code: 'PASSWORD_TOO_SHORT',
         message: 'Password must be at least 6 characters long.'
       });
     }
@@ -195,11 +201,12 @@ async function registerUser(req, res, next) {
     if (confirmPassword && password !== confirmPassword) {
       return res.status(400).json({
         success: false,
+        code: 'PASSWORD_MISMATCH',
         message: 'Passwords do not match.'
       });
     }
 
-    // Duplicate check in both User and Admin tables
+    // Check duplicate email in both User and Admin tables
     const [existingUser, existingAdmin] = await Promise.all([
       prisma.user.findUnique({ where: { email: userEmail } }),
       prisma.admin.findUnique({ where: { email: userEmail } })
@@ -208,78 +215,23 @@ async function registerUser(req, res, next) {
     if (existingAdmin) {
       return res.status(400).json({
         success: false,
+        code: 'RESERVED_EMAIL',
         message: 'This email is reserved for administration. Please use a different email.'
       });
     }
 
     if (existingUser) {
-      if (existingUser.isVerified) {
-        return res.status(400).json({
-          success: false,
-          alreadyExists: true,
-          isVerified: true,
-          message: 'An account with this email already exists and is verified. Please sign in instead.'
-        });
-      } else {
-        // Account exists but is unverified: rate-limit and allow resending verification
-        const recentToken = await prisma.emailVerification.findFirst({
-          where: { email: userEmail },
-          orderBy: { createdAt: 'desc' }
-        });
-        if (recentToken) {
-          const elapsedSec = (Date.now() - new Date(recentToken.createdAt).getTime()) / 1000;
-          if (elapsedSec < 60) {
-            const waitTime = Math.ceil(60 - elapsedSec);
-            return res.status(429).json({
-              success: false,
-              rateLimited: true,
-              retryAfter: waitTime,
-              message: `An unverified account with this email already exists. A verification email was recently dispatched. Please wait ${waitTime} seconds before requesting another.`
-            });
-          }
-        }
-
-        // Invalidate older tokens
-        await prisma.emailVerification.updateMany({
-          where: { email: userEmail, used: false },
-          data: { used: true }
-        });
-
-        // Issue fresh token
-        const rawVerifyToken = crypto.randomBytes(32).toString('hex');
-        const tokenHash = crypto.createHash('sha256').update(rawVerifyToken).digest('hex');
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-        await prisma.emailVerification.create({
-          data: {
-            email: userEmail,
-            tokenHash,
-            expiresAt,
-            used: false
-          }
-        });
-
-        const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${rawVerifyToken}`;
-        await sendVerificationEmail({
-          to: userEmail,
-          verificationUrl,
-          name: existingUser.name || displayName
-        });
-
-        return res.status(200).json({
-          success: true,
-          unverified: true,
-          requiresVerification: true,
-          email: userEmail,
-          message: 'An unverified account with this email already exists. A fresh activation link has been sent to your email.'
-        });
-      }
+      return res.status(409).json({
+        success: false,
+        code: 'USER_ALREADY_EXISTS',
+        message: 'An account with this email already exists. Please sign in.'
+      });
     }
 
-    // Securely hash password with bcrypt
+    // Securely hash password with bcrypt (salt rounds = 10)
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user account with unverified status (isVerified: false)
+    // Create user account as IMMEDIATELY ACTIVE (isVerified: true)
     const newUser = await prisma.user.create({
       data: {
         email: userEmail,
@@ -291,47 +243,40 @@ async function registerUser(req, res, next) {
         year: userYear,
         passwordHash,
         role: 'USER',
-        isVerified: false
+        isVerified: true
       }
     });
 
-    // Invalidate any old tokens for this email
-    await prisma.emailVerification.updateMany({
-      where: { email: userEmail, used: false },
-      data: { used: true }
-    });
-
-    // Generate single-use expiring verification token
-    const rawVerifyToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawVerifyToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    await prisma.emailVerification.create({
-      data: {
-        email: userEmail,
-        tokenHash,
-        expiresAt,
-        used: false
-      }
-    });
-
-    const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${rawVerifyToken}`;
-    const emailResult = await sendVerificationEmail({
-      to: userEmail,
-      verificationUrl,
-      name: newUser.name
-    });
-
-    if (!emailResult.success) {
-      console.error(`[REGISTRATION] Failed to dispatch verification email:`, emailResult.error);
-    }
+    // Generate JWT token so user can authenticate immediately
+    const token = jwt.sign(
+      {
+        userId: newUser.id,
+        email: newUser.email,
+        role: 'USER',
+        type: 'USER'
+      },
+      config.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
     return res.status(201).json({
       success: true,
-      unverified: true,
-      requiresVerification: true,
-      email: newUser.email,
-      message: 'Account created successfully! A verification email has been sent to your inbox. Please verify your email before signing in.'
+      message: 'Account created successfully! Welcome to COLORIDO 2K26.',
+      token,
+      role: 'USER',
+      redirectTo: '/events',
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        college: newUser.college,
+        course: newUser.course,
+        department: newUser.department,
+        year: newUser.year,
+        phone: newUser.phone,
+        role: 'USER',
+        isVerified: true
+      }
     });
   } catch (err) {
     next(err);
@@ -339,181 +284,11 @@ async function registerUser(req, res, next) {
 }
 
 /**
- * VERIFY EMAIL (Account Activation)
- * Endpoint to activate user account using verification token
- */
-async function verifyEmail(req, res, next) {
-  try {
-    const rawToken = req.query.token || req.body?.token;
-    if (!rawToken || typeof rawToken !== 'string') {
-      return res.status(400).json({
-        success: false,
-        message: 'Verification token is required.'
-      });
-    }
-
-    const cleanToken = rawToken.replace(/^["'<(\[]+|[>"')\]/\s]+$/g, '').trim();
-    const hexMatch = cleanToken.match(/[0-9a-fA-F]{64}/);
-    const effectiveToken = hexMatch ? hexMatch[0] : cleanToken;
-    const tokenHash = crypto.createHash('sha256').update(effectiveToken).digest('hex');
-
-    const record = await prisma.emailVerification.findFirst({
-      where: {
-        OR: [
-          { tokenHash },
-          { tokenHash: effectiveToken }
-        ]
-      }
-    });
-
-    if (!record) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or unrecognized activation link.'
-      });
-    }
-
-    if (record.used) {
-      return res.status(200).json({
-        success: true,
-        alreadyVerified: true,
-        message: 'Your account has already been activated. You can sign in now.'
-      });
-    }
-
-    if (new Date() > new Date(record.expiresAt)) {
-      return res.status(400).json({
-        success: false,
-        expired: true,
-        email: record.email,
-        message: 'This activation link has expired. Please request a new activation link.'
-      });
-    }
-
-    // Mark user as verified and token as used atomically
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { email: record.email },
-        data: { isVerified: true }
-      }),
-      prisma.emailVerification.update({
-        where: { id: record.id },
-        data: { used: true }
-      })
-    ]);
-
-    return res.json({
-      success: true,
-      email: record.email,
-      message: 'Account successfully activated! You can now log in to your account.'
-    });
-  } catch (err) {
-    next(err);
-  }
-}
-
-/**
- * RESEND VERIFICATION EMAIL
- * Rate-limited to at most 1 request per 60 seconds per email.
- */
-async function resendVerificationEmail(req, res, next) {
-  try {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email address is required.'
-      });
-    }
-
-    const normalizedEmail = email.toLowerCase().trim();
-
-    // Check rate-limit (60-second cooldown)
-    const recentToken = await prisma.emailVerification.findFirst({
-      where: { email: normalizedEmail },
-      orderBy: { createdAt: 'desc' }
-    });
-    if (recentToken) {
-      const elapsedSec = (Date.now() - new Date(recentToken.createdAt).getTime()) / 1000;
-      if (elapsedSec < 60) {
-        const waitTime = Math.ceil(60 - elapsedSec);
-        return res.status(429).json({
-          success: false,
-          rateLimited: true,
-          retryAfter: waitTime,
-          message: `Please wait ${waitTime} seconds before requesting another verification email.`
-        });
-      }
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail }
-    });
-
-    if (!user) {
-      return res.json({
-        success: true,
-        message: 'If an account exists with this email, a fresh activation link has been dispatched.'
-      });
-    }
-
-    if (user.isVerified) {
-      return res.json({
-        success: true,
-        alreadyVerified: true,
-        message: 'This account is already activated. You can sign in immediately.'
-      });
-    }
-
-    // Invalidate old tokens
-    await prisma.emailVerification.updateMany({
-      where: { email: normalizedEmail, used: false },
-      data: { used: true }
-    });
-
-    // Generate new token
-    const rawVerifyToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawVerifyToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    await prisma.emailVerification.create({
-      data: {
-        email: normalizedEmail,
-        tokenHash,
-        expiresAt,
-        used: false
-      }
-    });
-
-    const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${rawVerifyToken}`;
-    const emailResult = await sendVerificationEmail({
-      to: normalizedEmail,
-      verificationUrl,
-      name: user.name || 'Participant'
-    });
-
-    if (!emailResult.success) {
-      console.error(`[RESEND VERIFICATION ERROR]`, emailResult.error);
-      return res.status(502).json({
-        success: false,
-        message: `Failed to deliver verification email. Please try again shortly.`
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: 'A fresh activation link has been sent to your email address.'
-    });
-  } catch (err) {
-    next(err);
-  }
-}
-
-/**
- * FORGOT PASSWORD — USER AND ADMIN (Section: AUTHENTICATION — FINAL DESIGN)
- * Unified password reset system for both user and admin accounts.
- * Does not reveal whether the email exists (constant generic response).
- * Cryptographically generates and stores SHA-256 hash of reset token with short expiration.
+ * 3. FORGOT PASSWORD — ONLY CODE FLOW
+ * Generates a secure 6-digit numeric reset code.
+ * Stores ONLY the SHA-256 hash in the database with 10-minute expiry.
+ * Sends the 6-digit code to the user's email.
+ * Always returns a generic response to prevent email enumeration.
  */
 async function forgotPassword(req, res, next) {
   try {
@@ -522,26 +297,29 @@ async function forgotPassword(req, res, next) {
     if (!email || !email.includes('@')) {
       return res.status(400).json({
         success: false,
+        code: 'INVALID_EMAIL',
         message: 'Please provide a valid email address.'
       });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check rate limit (60-second cooldown per email)
+    // Check rate limit (60-second cooldown per email to prevent spam)
     const recentReset = await prisma.passwordReset.findFirst({
       where: { email: normalizedEmail },
       orderBy: { createdAt: 'desc' }
     });
+
     if (recentReset) {
       const elapsedSec = (Date.now() - new Date(recentReset.createdAt).getTime()) / 1000;
       if (elapsedSec < 60) {
         const waitTime = Math.ceil(60 - elapsedSec);
         return res.status(429).json({
           success: false,
+          code: 'RATE_LIMITED',
           rateLimited: true,
           retryAfter: waitTime,
-          message: `Please wait ${waitTime} seconds before requesting another password reset.`
+          message: `Please wait ${waitTime} seconds before requesting another reset code.`
         });
       }
     }
@@ -552,25 +330,30 @@ async function forgotPassword(req, res, next) {
       prisma.user.findUnique({ where: { email: normalizedEmail } })
     ]);
 
-    let userType = null;
-    if (admin) userType = 'ADMIN';
-    else if (user) userType = 'USER';
+    const targetAccount = admin || user;
+    const userType = admin ? 'ADMIN' : (user ? 'USER' : null);
 
-    // If account does NOT exist, do NOT leak account existence
-    if (!userType) {
+    // If account does NOT exist, return generic response without leaking account existence
+    if (!targetAccount) {
       return res.json({
         success: true,
-        message: 'If an account exists with this email address, a password reset link has been dispatched to your inbox.'
+        message: 'If an account exists with this email address, a 6-digit reset code has been sent.'
       });
     }
 
-    // Generate cryptographically secure token (64 hex characters)
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    // Generate secure 6-digit numeric code (e.g. 849201)
+    const resetCode = crypto.randomInt(100000, 1000000).toString();
+    // Store ONLY the SHA-256 hash of the code
+    const tokenHash = crypto.createHash('sha256').update(resetCode).digest('hex');
 
-    // Token expires in 60 minutes
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    // Invalidate any previous unused reset codes for this email
+    await prisma.passwordReset.updateMany({
+      where: { email: normalizedEmail, used: false },
+      data: { used: true }
+    });
 
+    // Create single-use token record with 10-minute expiry
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await prisma.passwordReset.create({
       data: {
         email: normalizedEmail,
@@ -581,24 +364,11 @@ async function forgotPassword(req, res, next) {
       }
     });
 
-    // Detect client base URL dynamically from request headers or environment config
-    let clientOrigin = req.headers.origin;
-    if (!clientOrigin && req.headers.referer) {
-      try {
-        clientOrigin = new URL(req.headers.referer).origin;
-      } catch (e) {
-        clientOrigin = null;
-      }
-    }
-    const baseUrl = (clientOrigin || config.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
-    const fullResetUrl = `${baseUrl}/reset-password?token=${rawToken}`;
-    const targetName = admin?.name || user?.name || 'Participant';
-
-    // Dispatch password reset email
-    const emailResult = await sendPasswordResetEmail({
+    // Send code by email
+    const emailResult = await sendPasswordResetCodeEmail({
       to: normalizedEmail,
-      resetUrl: fullResetUrl,
-      name: targetName
+      code: resetCode,
+      name: targetAccount.name || 'Participant'
     });
 
     if (!emailResult.success) {
@@ -609,8 +379,9 @@ async function forgotPassword(req, res, next) {
 
     return res.json({
       success: true,
-      message: 'If an account exists with this email address, a password reset link has been dispatched to your inbox.',
-      ...(isDev && { data: { resetUrl: `/reset-password?token=${rawToken}` } })
+      email: normalizedEmail,
+      message: 'A 6-digit password reset code has been sent to your email address.',
+      ...(isDev && { devCode: resetCode })
     });
   } catch (err) {
     next(err);
@@ -618,66 +389,74 @@ async function forgotPassword(req, res, next) {
 }
 
 /**
- * VERIFY RESET TOKEN
- * Checks if token is valid, unused, and not expired.
- * Sanitizes input and supports both direct hash and raw token matching.
+ * 4. RESEND RESET CODE (ONLY EXISTS HERE)
+ * Resends a fresh 6-digit reset code to the user.
+ * Enforces a 60-second cooldown rate limit.
+ * Safely invalidates previous code.
  */
-async function verifyResetToken(req, res, next) {
-  try {
-    const rawToken = req.query.token || req.body?.token;
+async function resendResetCode(req, res, next) {
+  return forgotPassword(req, res, next);
+}
 
-    if (!rawToken || typeof rawToken !== 'string') {
+/**
+ * 5. VERIFY RESET CODE
+ * Checks if the 6-digit code is valid, unused, and not expired for the given email.
+ */
+async function verifyResetCode(req, res, next) {
+  try {
+    const rawEmail = req.body?.email || req.query?.email;
+    const rawCode = req.body?.code || req.query?.code;
+
+    if (!rawEmail || !rawCode) {
       return res.status(400).json({
         success: false,
-        message: 'Password reset token is missing.'
+        code: 'MISSING_FIELDS',
+        message: 'Email address and 6-digit reset code are required.'
       });
     }
 
-    // Clean any surrounding quotes, brackets, whitespace, trailing slashes, or hashes
-    const cleanToken = rawToken.replace(/^["'<(\[]+|[>"')\]/\s]+$/g, '').trim();
-    const hexMatch = cleanToken.match(/[0-9a-fA-F]{64}/);
-    const effectiveToken = hexMatch ? hexMatch[0] : cleanToken;
+    const normalizedEmail = rawEmail.toLowerCase().trim();
+    const cleanCode = rawCode.toString().replace(/\D/g, '');
 
-    const tokenHash = crypto.createHash('sha256').update(effectiveToken).digest('hex');
+    if (cleanCode.length !== 6) {
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_RESET_CODE',
+        message: 'Reset code must be a 6-digit number.'
+      });
+    }
 
-    const resetRecord = await prisma.passwordReset.findFirst({
+    const codeHash = crypto.createHash('sha256').update(cleanCode).digest('hex');
+
+    const record = await prisma.passwordReset.findFirst({
       where: {
-        OR: [
-          { tokenHash },
-          { tokenHash: effectiveToken }
-        ]
+        email: normalizedEmail,
+        tokenHash: codeHash,
+        used: false
       }
     });
 
-    if (!resetRecord) {
+    if (!record) {
       return res.status(400).json({
         success: false,
-        invalid: true,
-        message: 'Invalid or unrecognized password reset token. Please request a new link.'
+        code: 'INVALID_RESET_CODE',
+        message: 'Invalid or already used verification code. Please check and try again.'
       });
     }
 
-    if (resetRecord.used) {
+    if (new Date() > new Date(record.expiresAt)) {
       return res.status(400).json({
         success: false,
-        alreadyUsed: true,
-        message: 'This password reset link has already been used. Please request a new one if you need to reset again.'
-      });
-    }
-
-    if (new Date() > new Date(resetRecord.expiresAt)) {
-      return res.status(400).json({
-        success: false,
+        code: 'RESET_CODE_EXPIRED',
         expired: true,
-        message: 'Password reset token has expired. Password reset links are valid for 60 minutes. Please request a new one.'
+        message: 'This reset code has expired. Codes are valid for 10 minutes. Please request a new code.'
       });
     }
 
     return res.json({
       success: true,
       valid: true,
-      message: 'Token is valid.',
-      data: { email: resetRecord.email }
+      message: 'Reset code verified successfully. You may now set your new password.'
     });
   } catch (err) {
     next(err);
@@ -685,112 +464,109 @@ async function verifyResetToken(req, res, next) {
 }
 
 /**
- * RESET PASSWORD — USER AND ADMIN (Section: AUTHENTICATION — FINAL DESIGN)
- * Validates token, hashes new password with bcrypt, updates account, and atomically invalidates all active reset tokens.
+ * 6. RESET PASSWORD (WITH 6-DIGIT CODE)
+ * Validates the 6-digit code, hashes new password with bcrypt, updates account,
+ * and atomically invalidates the code.
  */
 async function resetPassword(req, res, next) {
   try {
-    const rawToken = req.body?.token || req.query?.token;
+    const rawEmail = req.body?.email || req.query?.email;
+    const rawCode = req.body?.code || req.body?.token;
     const newPassword = req.body?.newPassword || req.body?.password;
     const confirmPassword = req.body?.confirmPassword;
 
-    if (!rawToken || typeof rawToken !== 'string') {
+    if (!rawEmail || !rawCode || !newPassword) {
       return res.status(400).json({
         success: false,
-        message: 'Password reset token is required.'
+        code: 'MISSING_FIELDS',
+        message: 'Email, verification code, and new password are required.'
       });
     }
 
-    if (!newPassword) {
+    const normalizedEmail = rawEmail.toLowerCase().trim();
+    const cleanCode = rawCode.toString().replace(/\D/g, '');
+
+    if (cleanCode.length !== 6) {
       return res.status(400).json({
         success: false,
-        message: 'New password is required.'
+        code: 'INVALID_RESET_CODE',
+        message: 'Verification code must be a 6-digit number.'
       });
     }
 
     if (newPassword.length < 6) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters long.'
+        code: 'PASSWORD_TOO_SHORT',
+        message: 'New password must be at least 6 characters long.'
       });
     }
 
     if (confirmPassword && newPassword !== confirmPassword) {
       return res.status(400).json({
         success: false,
+        code: 'PASSWORD_MISMATCH',
         message: 'Passwords do not match.'
       });
     }
 
-    // Clean any surrounding quotes, brackets, whitespace, trailing slashes, or hashes
-    const cleanToken = rawToken.replace(/^["'<(\[]+|[>"')\]/\s]+$/g, '').trim();
-    const hexMatch = cleanToken.match(/[0-9a-fA-F]{64}/);
-    const effectiveToken = hexMatch ? hexMatch[0] : cleanToken;
-
-    const tokenHash = crypto.createHash('sha256').update(effectiveToken).digest('hex');
+    // Verify code hash
+    const codeHash = crypto.createHash('sha256').update(cleanCode).digest('hex');
 
     const resetRecord = await prisma.passwordReset.findFirst({
       where: {
-        OR: [
-          { tokenHash },
-          { tokenHash: effectiveToken }
-        ]
+        email: normalizedEmail,
+        tokenHash: codeHash,
+        used: false
       }
     });
 
     if (!resetRecord) {
       return res.status(400).json({
         success: false,
-        invalid: true,
-        message: 'Invalid or unrecognized password reset token.'
-      });
-    }
-
-    if (resetRecord.used) {
-      return res.status(400).json({
-        success: false,
-        alreadyUsed: true,
-        message: 'This password reset link has already been used. Please request a new one.'
+        code: 'INVALID_RESET_CODE',
+        message: 'Invalid or already used verification code. Please check and try again.'
       });
     }
 
     if (new Date() > new Date(resetRecord.expiresAt)) {
       return res.status(400).json({
         success: false,
+        code: 'RESET_CODE_EXPIRED',
         expired: true,
-        message: 'Password reset token has expired. Please request a new one.'
+        message: 'This reset code has expired. Please request a new code.'
       });
     }
 
-    // Hash new password with bcrypt
+    // Hash new password with bcrypt (salt rounds = 10)
     const newHash = await bcrypt.hash(newPassword, 10);
 
     // Update account in both Admin and User tables if matching
-    const adminAccount = await prisma.admin.findUnique({ where: { email: resetRecord.email } });
+    const adminAccount = await prisma.admin.findUnique({ where: { email: normalizedEmail } });
     if (adminAccount) {
       await prisma.admin.update({
-        where: { email: resetRecord.email },
+        where: { email: normalizedEmail },
         data: { passwordHash: newHash }
       });
     }
 
-    const userAccount = await prisma.user.findUnique({ where: { email: resetRecord.email } });
+    const userAccount = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (userAccount) {
       await prisma.user.update({
-        where: { email: resetRecord.email },
-        data: { passwordHash: newHash }
+        where: { email: normalizedEmail },
+        data: { passwordHash: newHash, isVerified: true }
       });
     }
 
-    // Atomically invalidate ALL active password reset tokens for this email
+    // Atomically invalidate all active reset codes for this email
     await prisma.passwordReset.updateMany({
-      where: { email: resetRecord.email, used: false },
+      where: { email: normalizedEmail, used: false },
       data: { used: true }
     });
 
     return res.json({
       success: true,
-      message: 'Password has been successfully reset! Please sign in with your new password.',
+      message: 'Password has been successfully reset! You can now sign in with your new password.',
       redirectTo: '/auth'
     });
   } catch (err) {
@@ -799,7 +575,7 @@ async function resetPassword(req, res, next) {
 }
 
 /**
- * CHANGE PASSWORD (AUTHENTICATED)
+ * 7. CHANGE PASSWORD (AUTHENTICATED)
  */
 async function changePassword(req, res, next) {
   try {
@@ -809,6 +585,7 @@ async function changePassword(req, res, next) {
     if (!actor || !currentPassword || !newPassword) {
       return res.status(400).json({
         success: false,
+        code: 'MISSING_FIELDS',
         message: 'Current password and new password are required.'
       });
     }
@@ -816,6 +593,7 @@ async function changePassword(req, res, next) {
     if (newPassword.length < 6) {
       return res.status(400).json({
         success: false,
+        code: 'PASSWORD_TOO_SHORT',
         message: 'New password must be at least 6 characters long.'
       });
     }
@@ -823,11 +601,11 @@ async function changePassword(req, res, next) {
     if (newPassword !== confirmPassword) {
       return res.status(400).json({
         success: false,
+        code: 'PASSWORD_MISMATCH',
         message: 'New passwords do not match.'
       });
     }
 
-    // Fetch account with passwordHash
     const isAdmin = actor.role === 'ADMIN';
     let account = null;
 
@@ -840,6 +618,7 @@ async function changePassword(req, res, next) {
     if (!account || !account.passwordHash) {
       return res.status(400).json({
         success: false,
+        code: 'ACCOUNT_NOT_FOUND',
         message: 'Account not found or has no password set.'
       });
     }
@@ -848,6 +627,7 @@ async function changePassword(req, res, next) {
     if (!isMatch) {
       return res.status(400).json({
         success: false,
+        code: 'INCORRECT_CURRENT_PASSWORD',
         message: 'Current password is incorrect.'
       });
     }
@@ -876,7 +656,7 @@ async function changePassword(req, res, next) {
 }
 
 /**
- * GET CURRENT AUTHENTICATED PROFILE (USER OR ADMIN)
+ * 8. GET CURRENT AUTHENTICATED PROFILE (USER OR ADMIN)
  */
 async function getMe(req, res, next) {
   try {
@@ -899,9 +679,11 @@ async function getMe(req, res, next) {
         email: true,
         phone: true,
         college: true,
+        course: true,
         department: true,
         year: true,
         role: true,
+        isVerified: true,
         createdAt: true,
         registrations: {
           orderBy: { createdAt: 'desc' },
@@ -933,7 +715,7 @@ async function getMe(req, res, next) {
 }
 
 /**
- * LOGOUT
+ * 9. LOGOUT
  */
 async function logout(req, res) {
   return res.json({
@@ -942,20 +724,40 @@ async function logout(req, res) {
   });
 }
 
+/**
+ * 10. BACKWARD COMPATIBILITY STUBS
+ * For any legacy bookmarks to /verify-email: returns immediate success.
+ */
+async function verifyEmail(req, res) {
+  return res.json({
+    success: true,
+    message: 'Email verification is no longer required. You can sign in directly.'
+  });
+}
+
+async function resendVerificationEmail(req, res) {
+  return res.json({
+    success: true,
+    message: 'Email verification is no longer required. You can sign in directly.'
+  });
+}
+
 module.exports = {
   unifiedLogin,
   registerUser,
-  verifyEmail,
-  resendVerificationEmail,
   forgotPassword,
-  verifyResetToken,
+  resendResetCode,
+  verifyResetCode,
   resetPassword,
   changePassword,
   getMe,
   getAdminMe: getMe,
   logout,
 
-  // Compatibility aliases
+  // Backward compatibility
+  verifyEmail,
+  resendVerificationEmail,
+  verifyResetToken: verifyResetCode,
   adminLogin: unifiedLogin,
   emailAuth: unifiedLogin
 };

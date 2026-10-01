@@ -46,15 +46,7 @@ async function createRegistration(req, res, next) {
       });
     }
 
-    if (req.user.isVerified === false) {
-      return res.status(403).json({
-        success: false,
-        unverified: true,
-        requiresVerification: true,
-        email: req.user.email,
-        message: 'Your email address is not verified. Please verify your email before registering.'
-      });
-    }
+
 
     const {
       eventId,

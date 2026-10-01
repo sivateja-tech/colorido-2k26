@@ -3,6 +3,8 @@ import {
   login as apiLogin,
   register as apiRegister,
   forgotPassword as apiForgotPassword,
+  resendResetCode as apiResendResetCode,
+  verifyResetCode as apiVerifyResetCode,
   resetPassword as apiResetPassword,
   changePassword as apiChangePassword,
   logoutUserApi,
@@ -126,7 +128,7 @@ export function AuthProvider({ children }) {
 
       return {
         success: false,
-        message: sanitizeAuthMessage(res.data?.message, 'Authentication failed.')
+        message: sanitizeAuthMessage(res.data?.message, 'Invalid email or password.')
       };
     } catch (err) {
       console.error('Login error:', err);
@@ -134,15 +136,7 @@ export function AuthProvider({ children }) {
       if (isConnectionIssue) {
         return {
           success: false,
-          message: 'Cannot connect to COLORIDO festival servers. Please check your internet connection or verify the server status.'
-        };
-      }
-      if (err.response?.data?.requiresVerification || err.response?.status === 403) {
-        return {
-          success: false,
-          requiresVerification: true,
-          email: err.response?.data?.email || email,
-          message: sanitizeAuthMessage(err.response?.data?.message, 'Your account is not activated yet. Please verify your email before logging in.')
+          message: 'Cannot connect to COLORIDO festival servers. Please check your internet connection.'
         };
       }
       return {
@@ -153,18 +147,27 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * User Registration (Public - Strictly role = 'USER', unverified)
+   * User Registration (Public - role = 'USER', immediately active)
+   * NO email verification, NO verification codes, NO verification links.
+   * Immediately logs in and saves JWT.
    */
   const register = async (userData) => {
     try {
       const res = await apiRegister(userData);
       if (res.data?.success) {
+        const { token, user: profile, redirectTo } = res.data;
+        if (token && profile) {
+          localStorage.setItem('colorido_token', token);
+          localStorage.setItem('colorido_user_token', token);
+          localStorage.setItem('colorido_user', JSON.stringify(profile));
+          setUser(profile);
+        }
         return {
           success: true,
-          unverified: true,
-          requiresVerification: true,
-          email: res.data.email || userData.email,
-          message: res.data.message || 'Account created successfully! Please check your email to activate your account.'
+          token,
+          user: profile,
+          redirectTo: redirectTo || '/events',
+          message: res.data.message || 'Account created successfully! Welcome to COLORIDO 2K26.'
         };
       }
 
@@ -184,18 +187,14 @@ export function AuthProvider({ children }) {
       const data = err.response?.data;
       return {
         success: false,
-        alreadyExists: data?.alreadyExists,
-        isVerified: data?.isVerified,
-        rateLimited: data?.rateLimited,
-        requiresVerification: data?.requiresVerification,
-        email: data?.email || userData.email,
-        message: sanitizeAuthMessage(data?.message, 'Registration could not be completed. Please verify your details and retry.')
+        alreadyExists: data?.alreadyExists || data?.code === 'USER_ALREADY_EXISTS',
+        message: sanitizeAuthMessage(data?.message, 'Registration could not be completed. Please check your details and try again.')
       };
     }
   };
 
   /**
-   * Forgot Password
+   * Forgot Password (Request 6-digit numeric reset code to email)
    */
   const forgotPassword = async (email) => {
     try {
@@ -203,39 +202,63 @@ export function AuthProvider({ children }) {
       return res.data;
     } catch (err) {
       const errData = err.response?.data;
-      const isUserNotFound = Boolean(errData?.notFound || errData?.userNotFound);
       let errorMsg = 'Failed to process password reset request.';
-
       if (err.message === 'Network Error' || !err.response) {
-        errorMsg = 'Cannot connect to COLORIDO festival servers. Please check your internet connection or verify the backend server is running.';
-      } else if (typeof errData === 'string' && (errData.includes('ECONNREFUSED') || errData.includes('proxy error'))) {
-        errorMsg = 'Backend server is offline (Port 5000 not reachable). Please start the backend service.';
-      } else if (err.response?.status === 404 && !isUserNotFound) {
-        errorMsg = 'Festival API endpoint was not found (404). Please ensure the backend service is running and accessible.';
-      } else if (typeof errData === 'string' && errData.includes('<!DOCTYPE')) {
-        errorMsg = 'Festival API server error. The server returned an HTML error response.';
+        errorMsg = 'Cannot connect to COLORIDO festival servers. Please check your internet connection.';
       } else if (errData?.message) {
         errorMsg = errData.message;
-      } else if (errData?.error) {
-        errorMsg = errData.error;
-      } else if (err.message) {
-        errorMsg = err.message;
       }
-
       return {
         success: false,
-        notFound: isUserNotFound,
-        userNotFound: isUserNotFound,
         rateLimited: Boolean(errData?.rateLimited || err.response?.status === 429),
-        retryAfter: errData?.retryAfter,
-        redirectTo: errData?.redirectTo,
+        retryAfter: errData?.retryAfter || 60,
         message: errorMsg
       };
     }
   };
 
   /**
-   * Reset Password
+   * Resend Reset Code (Dedicated with 60s cooldown)
+   */
+  const resendResetCode = async (email) => {
+    try {
+      const res = await apiResendResetCode(email);
+      return res.data;
+    } catch (err) {
+      const errData = err.response?.data;
+      let errorMsg = 'Failed to resend reset code.';
+      if (err.message === 'Network Error' || !err.response) {
+        errorMsg = 'Cannot connect to COLORIDO festival servers. Please check your internet connection.';
+      } else if (errData?.message) {
+        errorMsg = errData.message;
+      }
+      return {
+        success: false,
+        rateLimited: Boolean(errData?.rateLimited || err.response?.status === 429),
+        retryAfter: errData?.retryAfter || 60,
+        message: errorMsg
+      };
+    }
+  };
+
+  /**
+   * Verify 6-digit Reset Code
+   */
+  const verifyResetCode = async (email, code) => {
+    try {
+      const res = await apiVerifyResetCode(email, code);
+      return res.data;
+    } catch (err) {
+      const errData = err.response?.data;
+      return {
+        success: false,
+        message: errData?.message || 'Invalid or expired 6-digit verification code.'
+      };
+    }
+  };
+
+  /**
+   * Reset Password (with 6-digit code)
    */
   const resetPassword = async (payload) => {
     try {
@@ -294,6 +317,8 @@ export function AuthProvider({ children }) {
         register,
         logout,
         forgotPassword,
+        resendResetCode,
+        verifyResetCode,
         resetPassword,
         changePassword,
 
